@@ -48,3 +48,6 @@ local.properties
 # Maven related
 target/*
 /target/
+
+# Mac related
+.DS_Store
