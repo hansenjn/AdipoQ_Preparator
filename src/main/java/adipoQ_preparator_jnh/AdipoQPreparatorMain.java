@@ -246,6 +246,12 @@ public void run(String arg) {
 	if(selectedTaskVariant.equals(taskVariant[1])){
 		for(int i = tasks-1; i >= 0; i--){
 			IJ.showProgress((tasks-i)/tasks);
+			if(name [i].substring(name[i].lastIndexOf(".")).equals(".tif")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".TIF")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".tiff")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".TIFF")) {
+				continue;
+			}
 			try {
 				bfOptions = new ImporterOptions();
 				bfOptions.setId(""+dir[i]+name[i]+"");
@@ -308,11 +314,14 @@ public void run(String arg) {
 						}
 						int k = 0;
 						for(int j = 0; j < imps.length; j++) {
-							if((","+loadSeries+",").contains(","+j+","))
+							if(!(","+loadSeries+",").contains(","+(j+1)+",")) {
+								continue;
+							}
 							nameTemp [i+k] = name [i]; 
 							dirTemp [i+k] = dir [i];
 							seriesTemp [i+k] = j;
 							totSeriesTemp [i+k] = imps.length;
+							k++;
 						}
 						
 						for(int j = i+1; j < name.length; j++) {
@@ -526,6 +535,13 @@ public void run(String arg) {
 				progress.updateBarText("Set custom threshold " + customThr + " ...");
 				threshold = customThr;
 				tp1.append("Used " + chosenAlgorithm + " as intensity threshold - threshold value:	" + df6.format(threshold));
+
+				progress.addToBar(0.15);
+				
+				progress.updateBarText("Segment image with threshold " + dfDialog.format(threshold) + " ...");
+				segmentImage(tempImp, threshold, 0, tempImp, 0, false, false);
+
+				progress.addToBar(0.15);
 			}			
 
 			if(despeckle) {
