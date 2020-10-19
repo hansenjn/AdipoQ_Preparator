@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.1
+* AdipoQ Preparator Version 0.0.2
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: October 13, 2020)
+* Date: October 13, 2020 (This Version: October 19, 2020)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.*;
 import java.text.*;
 
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 
 import org.apache.commons.lang.StringUtils;
@@ -41,7 +39,6 @@ import ij.measure.*;
 import ij.plugin.*;
 import ij.process.LUT;
 import ij.text.*;
-import loci.formats.FormatException;
 import loci.plugins.BF;
 import loci.plugins.in.ImporterOptions;
 import ij.process.AutoThresholder.Method;
@@ -49,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.1";
+	static final String PLUGINVERSION = "0.0.2";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -78,7 +75,7 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	String selectedTaskVariant = taskVariant[1];
 	int tasks = 1;
 
-	final static String[] settingsMethod = {"manually enter preferences", "load preferences from existing CiliaQ Preparator metadata file"};
+	final static String[] settingsMethod = {"manually enter preferences", "load preferences from existing AdipoQ Preparator metadata file"};
 	String selectedSettingsVariant = settingsMethod [0];
 	
 	String loadSeries = "ALL";
@@ -94,7 +91,8 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	String chosenAlgorithm = "Triangle";
 	double customThr = 0.0;
 	boolean despeckle = true;
-
+	boolean fillHoles = true;
+	
 	static final String[] outputVariant = {"save as filename + suffix 'AQP'", "save as filename + suffix 'AQP' + date"};
 	String chosenOutputName = outputVariant[0];
 	
@@ -376,10 +374,19 @@ public void run(String arg) {
 //		}
 	
 	
-   	ImagePlus imp; 	  	
+   	ImagePlus imp, tempImp, mask, tempImp2, outImp;
+   	CompositeImage ci;
+   	TextPanel tp1;
+   	double threshold;
+   	Date startDate;
+   	LUT [] originalLuts;
+   	LUT [] newLuts;
+   	String copyStr;
+   	int indexOld, indexNew;
+   	
 	for(int task = 0; task < tasks; task++){
 		running: while(continueProcessing){
-			Date startDate = new Date();
+			startDate = new Date();
 			progress.updateBarText("in progress...");
 			//Check for problems
 			if(name[task].contains(".") && name[task].substring(name[task].lastIndexOf("."),name[task].length()).equals(".txt")){
@@ -482,11 +489,8 @@ public void run(String arg) {
 		/******************************************************************
 		*** 						Processing							***	
 		*******************************************************************/
-		   	ImagePlus tempImp;
-		   	double threshold;
-		   	
 			//start logging metadata
-			TextPanel tp1 = new TextPanel("results");
+			tp1 = new TextPanel("results");
 			addSettingsBlockToPanel(tp1,  startDate, name[task], totSeries[task]>1, series[task], imp);
 			tp1.append("");
 			
@@ -552,7 +556,7 @@ public void run(String arg) {
 			progress.addToBar(0.1);
 			
 			progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius) + " px)...");
-			ImagePlus mask = getFillHolesAndRemoveNoise(tempImp, removeRadius);
+			mask = getFillHolesAndRemoveNoise(tempImp, removeRadius);
 
 			progress.addToBar(0.1);
 			
@@ -562,7 +566,7 @@ public void run(String arg) {
 			progress.addToBar(0.1);
 
 			ImageCalculator ic = new ImageCalculator();
-			ImagePlus tempImp2 = ic.run("AND create", tempImp, mask);
+			tempImp2 = ic.run("AND create", tempImp, mask);
 			
 //			tempImp2.show();
 //			tempImp.show();
@@ -580,14 +584,16 @@ public void run(String arg) {
 
 			progress.addToBar(0.1);
 		   	
+			if(fillHoles) {
+				IJ.run(tempImp, "Fill Holes", "");
+			}
+			
+			
 			if(includeDuplicateChannel){
-		   		ImagePlus outImp = IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
+		   		outImp = IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
 		   				2, imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
 		   		outImp.setCalibration(imp.getCalibration());
 		   		outImp.setDisplayMode(IJ.COMPOSITE);
-		   		
-		   		int indexOld, indexNew;
-		   		int cNew = 0;
 		   		for(int x = 0; x < imp.getWidth(); x++){
 		   			for(int y = 0; y < imp.getHeight(); y++){
 		   				for(int s = 0; s < imp.getNSlices(); s++){
@@ -604,16 +610,14 @@ public void run(String arg) {
 		   			}
 		   		}
 		   		
-		   		LUT [] originalLuts = new LUT [imp.getNChannels()];
+		   		originalLuts = new LUT [imp.getNChannels()];
 			   	for(int c = 0; c < imp.getNChannels(); c++){
 			   		imp.setC(c+1);
 			   		originalLuts[c] = imp.getChannelProcessor().getLut();
 			   	}		   		
-			   	LUT [] newLuts = new LUT [outImp.getNChannels()];
+			   	newLuts = new LUT [outImp.getNChannels()];
 			   	
 			   	tp1.append("Channels in output image:");
-			   	String copyStr;
-			   	boolean search;
 		   		
 		   		newLuts [0] = originalLuts [channelID-1];
 		   		newLuts [1] = originalLuts [channelID-1];
@@ -642,21 +646,25 @@ public void run(String arg) {
    					}
 				}
 		   		
-		   		CompositeImage ci = (CompositeImage)outImp;
+		   		ci = (CompositeImage)outImp;
 				ci.setDisplayMode(IJ.COMPOSITE);
 			    ci.setLuts(newLuts);
 				IJ.saveAsTiff(ci, filePrefix + ".tif");
+				ci.changes = false;
+				ci.close();
 		   		tempImp.changes = false;
 				tempImp.close();
 				outImp.changes = false;
 				outImp.close();
-				ci.changes = false;
-				ci.close();
 		   	}else{
 				IJ.saveAsTiff(tempImp, filePrefix + ".tif");	
 				tempImp.changes = false;
 				tempImp.close();
 		   	}
+			tempImp2.changes = false;
+			tempImp2.close();
+			mask.changes = false;
+			mask.close();
 		   	
 		   	addFooter(tp1, startDate);				
 			tp1.saveAs(filePrefix + ".txt");			
@@ -733,6 +741,8 @@ private Roi getRegionsAboveZeroAsROI(ImagePlus imp, int channel, double closeHol
 	
 //	tempImp.duplicate().show();
 //	new WaitForUserDialog("MinMaxedWithSelection " + "radius=" + dfDialog.format(closeHolesRadius)).show();	
+	tempImp.changes = false;
+	tempImp.close();
 	
 	return roi;	
 }
@@ -860,6 +870,10 @@ private boolean importSettings() {
 					despeckle = true;
 					IJ.log("Despeckle mask");
 				}
+				if(line.contains("Fill holes in mask")) {
+					fillHoles = true;
+					IJ.log("Fill holes in mask");
+				}
 			}			
 		}					
 		br.close();
@@ -890,6 +904,8 @@ private boolean enterSettings() {
 	gd.setInsets(0,0,0);		gd.addNumericField("If 'CUSTOM threshold' was selected, specify threshold here", customThr, 2);
 	
 	gd.setInsets(0,10,0);		gd.addCheckbox("Despeckle segmented image", despeckle);
+
+	gd.setInsets(0,10,0);		gd.addCheckbox("Fill holes in segmented image", fillHoles);
 	
 	gd.setInsets(0,10,0);		gd.addNumericField("Radius of particles to be removed as noise while detecting adipose tissue regions", removeRadius, 2);
 	
@@ -905,6 +921,7 @@ private boolean enterSettings() {
 		chosenAlgorithm = gd.getNextChoice();
 		customThr = gd.getNextNumber();
 		despeckle = gd.getNextBoolean();
+		fillHoles = gd.getNextBoolean();
 		removeRadius = gd.getNextNumber();
 	}
 	System.gc();
@@ -916,78 +933,14 @@ private boolean enterSettings() {
 	return true;
 }
 
-static ImagePlus divideByBackground(ImagePlus imp, double radius) {
-	ImagePlus outImp = IJ.createHyperStack("divided image", imp.getWidth(), imp.getHeight(), 1, imp.getNSlices(), imp.getNFrames(), 32);
-	outImp.setCalibration(imp.getCalibration());
-	outImp.setOverlay(imp.getOverlay());
-	ImagePlus tempImp;
-	for(int s = 0; s < imp.getNSlices(); s++) {
-		for(int t = 0; t < imp.getNFrames(); t++) {
-			tempImp = IJ.createHyperStack("temp", imp.getWidth(), imp.getHeight(), 1, 1, 1, imp.getBitDepth());
-			for(int x = 0; x < imp.getWidth(); x++) {
-				for(int y = 0; y < imp.getHeight(); y++) {
-					tempImp.getStack().setVoxel(x, y, 0, imp.getStack().getVoxel(x, y, imp.getStackIndex(1 , s+1, t+1)-1));
-				}
-			}
-			tempImp.getProcessor().blurGaussian(radius);
-			for(int x = 0; x < imp.getWidth(); x++) {
-				for(int y = 0; y < imp.getHeight(); y++) {
-					outImp.getStack().setVoxel(x, y, outImp.getStackIndex(1, s+1, t+1)-1, 
-							imp.getStack().getVoxel(x, y, imp.getStackIndex(1 , s+1, t+1)-1) 
-							/ tempImp.getStack().getVoxel(x, y, 0));
-				}
-			}
-		}
-	}
-	return outImp;	
-}
-
-static ImagePlus blurGaussian(ImagePlus imp, double radius) {
-	ImagePlus outImp = IJ.createHyperStack("divided image", imp.getWidth(), imp.getHeight(), 
-			imp.getNChannels(), imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
-	outImp.setCalibration(imp.getCalibration());
-	outImp.setOverlay(imp.getOverlay());
-	ImagePlus tempImp;
-	for(int c = 0; c < imp.getNChannels(); c++) {
-		for(int s = 0; s < imp.getNSlices(); s++) {
-			for(int t = 0; t < imp.getNFrames(); t++) {
-				tempImp = IJ.createHyperStack("temp", imp.getWidth(), imp.getHeight(), 1, 1, 1, imp.getBitDepth());
-				for(int x = 0; x < imp.getWidth(); x++) {
-					for(int y = 0; y < imp.getHeight(); y++) {
-						tempImp.getStack().setVoxel(x, y, 0, imp.getStack().getVoxel(x, y, imp.getStackIndex(c+1 , s+1, t+1)-1));
-					}
-				}
-				tempImp.getProcessor().blurGaussian(radius);
-				for(int x = 0; x < imp.getWidth(); x++) {
-					for(int y = 0; y < imp.getHeight(); y++) {
-						outImp.getStack().setVoxel(x, y, outImp.getStackIndex(c+1, s+1, t+1)-1, 
-								tempImp.getStack().getVoxel(x, y, 0));
-					}
-				}
-			}
-		}
-	}
-	
-	return outImp;	
-}
-
 private void addFooter(TextPanel tp, Date currentDate){
 	tp.append("");
 	tp.append("Datafile was generated on " + FullDateFormatter2.format(currentDate) + " by '"
-			+PLUGINNAME+"', an ImageJ plug-in by Jan Niklas Hansen (jan.hansen@uni-bonn.de, https://github.com/hansenjn/CiliaQ_Preparator).");
+			+PLUGINNAME+"', an ImageJ plug-in by Jan Niklas Hansen (jan.hansen@uni-bonn.de, https://github.com/hansenjn/AdipoQ_Preparator).");
 	tp.append("The plug-in '"+PLUGINNAME+"' is distributed in the hope that it will be useful,"
 			+ " but WITHOUT ANY WARRANTY; without even the implied warranty of"
 			+ " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.");
 	tp.append("Plug-in version:	V"+PLUGINVERSION);	
-}
-
-private String getOneRowFooter(Date currentDate){
-	return  "Datafile was generated on " + FullDateFormatter2.format(currentDate) + " by '"+PLUGINNAME
-			+"', an ImageJ plug-in by Jan Niklas Hansen (jan.hansen@uni-bonn.de(jan.hansen@uni-bonn.de, https://github.com/hansenjn/CiliaQ_Preparator))."
-			+ "	The plug-in '"+PLUGINNAME+"' is distributed in the hope that it will be useful,"
-				+ " but WITHOUT ANY WARRANTY; without even the implied warranty of"
-				+ " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
-			+"	Plug-in version:	V"+PLUGINVERSION;	
 }
 
 /**
@@ -1013,34 +966,6 @@ private static ImagePlus copyChannel(ImagePlus imp, int channel, boolean adjustD
 	impNew.setCalibration(imp.getCalibration());
 	return impNew;
 }
-
-/**
- * @return maximum-intensity-projection image of the specified stack range in the input ImagePlus (imp)
- * startSlice = first slice included into projection (1 < startSlice < NSlices)
- * */
-private static ImagePlus maximumProjection(ImagePlus imp, int startSlice, int endSlice){
-	//reset borders, if indicated start / end does not fit stack size
-	if(startSlice < 1)	startSlice=1;
-	if(endSlice > imp.getStackSize())	endSlice = imp.getStackSize();
-	
-	//generate maximum intensity projection
-	ImagePlus outImp = IJ.createImage("MIP", imp.getWidth(), imp.getHeight(), 1, imp.getBitDepth());
-	double maximumAtPos;
-	for(int x = 0; x < imp.getWidth(); x++){
-		for(int y = 0; y < imp.getHeight(); y++){
-			maximumAtPos = 0.0;
-			for(int z = startSlice-1; z < endSlice; z++){
-				if(imp.getStack().getVoxel(x,y,z) > maximumAtPos){
-					maximumAtPos = imp.getStack().getVoxel(x,y,z);
-				}
-			}
-			outImp.getStack().setVoxel(x,y,0,maximumAtPos);
-		}
-	}
-	outImp.setCalibration(imp.getCalibration());
-	return outImp;
-}
-
 
 /**
  * @return a threshold for the slice image <s> in the ImagePlus <parImp> for the image <imp>
@@ -1116,6 +1041,10 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 		
 		if(despeckle){
 			tp.append("	Despeckle mask");
+		}else{tp.append("");}
+		
+		if(fillHoles){
+			tp.append("	Fill holes in mask");
 		}else{tp.append("");}		
 		
 		tp.append("	Radius of particles to be removed as noise while detecting adipose tissue regions (px):	" + df6.format(removeRadius));
