@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.2
+* AdipoQ Preparator Version 0.0.3
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: October 19, 2020)
+* Date: October 13, 2020 (This Version: November 04, 2020)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -39,14 +39,16 @@ import ij.measure.*;
 import ij.plugin.*;
 import ij.process.LUT;
 import ij.text.*;
+import loci.formats.FormatException;
 import loci.plugins.BF;
+import loci.plugins.in.ImportProcess;
 import loci.plugins.in.ImporterOptions;
 import ij.process.AutoThresholder.Method;
 
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.2";
+	static final String PLUGINVERSION = "0.0.3";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -254,97 +256,96 @@ public void run(String arg) {
 				bfOptions = new ImporterOptions();
 				bfOptions.setId(""+dir[i]+name[i]+"");
 				bfOptions.setVirtual(true);
-				bfOptions.setOpenAllSeries(true);
-				ImagePlus[] imps = BF.openImagePlus(bfOptions);
-				if(imps.length > 1 || !loadSeries.equals("ALL")) {
-					if(loadSeries.equals("ALL")) {
-						String [] nameTemp = new String [name.length+imps.length-1], 
-								dirTemp = new String [name.length+imps.length-1];
-						int [] seriesTemp = new int [nameTemp.length],
-								totSeriesTemp = new int [nameTemp.length]; 
-						for(int j = 0; j < i; j++) {
-							nameTemp [j] = name [j]; 
-							dirTemp [j] = dir [j];
-							seriesTemp [j] = series [j];
-							totSeriesTemp [j] = totSeries [j];
-							
-						}
-						for(int j = 0; j < imps.length; j++) {
-							nameTemp [i+j] = name [i]; 
-							dirTemp [i+j] = dir [i];
-							seriesTemp [i+j] = j;
-							totSeriesTemp [i+j] = imps.length;
-						}
-						for(int j = i+1; j < name.length; j++) {
-							nameTemp [j+imps.length-1] = name [j]; 
-							dirTemp [j+imps.length-1] = dir [j];
-							seriesTemp [j+imps.length-1] = series [j];
-							totSeriesTemp [j+imps.length-1] = totSeries [j];
-						}
+				
+				int nOfSeries = this.getNumberOfSeries(bfOptions);
+//				IJ.log("nSeries: " + nOfSeries);
+				
+				if(loadSeries.equals("ALL") && nOfSeries > 1 ) {
+					String [] nameTemp = new String [name.length+nOfSeries-1], 
+							dirTemp = new String [name.length+nOfSeries-1];
+					int [] seriesTemp = new int [nameTemp.length],
+							totSeriesTemp = new int [nameTemp.length]; 
+					for(int j = 0; j < i; j++) {
+						nameTemp [j] = name [j]; 
+						dirTemp [j] = dir [j];
+						seriesTemp [j] = series [j];
+						totSeriesTemp [j] = totSeries [j];
 						
-						//copy arrays
-
-						tasks = nameTemp.length;
-						name = new String [tasks];
-						dir = new String [tasks];
-						series = new int [tasks];
-						totSeries = new int [tasks];
-						
-						for(int j = 0; j < nameTemp.length; j++) {
-							name [j] = nameTemp [j];
-							dir [j] = dirTemp [j];
-							series [j] = seriesTemp [j];
-							totSeries [j] = totSeriesTemp [j];
+					}
+					for(int j = 0; j < nOfSeries; j++) {
+						nameTemp [i+j] = name [i]; 
+						dirTemp [i+j] = dir [i];
+						seriesTemp [i+j] = j;
+						totSeriesTemp [i+j] = nOfSeries;
+					}
+					for(int j = i+1; j < name.length; j++) {
+						nameTemp [j+nOfSeries-1] = name [j]; 
+						dirTemp [j+nOfSeries-1] = dir [j];
+						seriesTemp [j+nOfSeries-1] = series [j];
+						totSeriesTemp [j+nOfSeries-1] = totSeries [j];
+					}
+					
+					//copy arrays
+					tasks = nameTemp.length;
+					name = new String [tasks];
+					dir = new String [tasks];
+					series = new int [tasks];
+					totSeries = new int [tasks];
+					
+					for(int j = 0; j < nameTemp.length; j++) {
+						name [j] = nameTemp [j];
+						dir [j] = dirTemp [j];
+						series [j] = seriesTemp [j];
+						totSeries [j] = totSeriesTemp [j];
 //							filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
-						}
-					}else {
-						int nrOfSeriesImages = StringUtils.countMatches(loadSeries,",")+1;
-						String [] nameTemp = new String [name.length+nrOfSeriesImages-1], 
-								dirTemp = new String [name.length+nrOfSeriesImages-1];
-						int [] seriesTemp = new int [nameTemp.length],
-								totSeriesTemp = new int [nameTemp.length]; 
-						for(int j = 0; j < i; j++) {
-							nameTemp [j] = name [j]; 
-							dirTemp [j] = dir [j];
-							seriesTemp [j] = series [j];
-							totSeriesTemp [j] = totSeries [j];
-							
-						}
-						int k = 0;
-						for(int j = 0; j < imps.length; j++) {
-							if(!(","+loadSeries+",").contains(","+(j+1)+",")) {
-								continue;
-							}
-							nameTemp [i+k] = name [i]; 
-							dirTemp [i+k] = dir [i];
-							seriesTemp [i+k] = j;
-							totSeriesTemp [i+k] = imps.length;
-							k++;
-						}
+					}
+				}else {
+					int nrOfSeriesImages = StringUtils.countMatches(loadSeries,",")+1;
+					String [] nameTemp = new String [name.length+nrOfSeriesImages-1], 
+							dirTemp = new String [name.length+nrOfSeriesImages-1];
+					int [] seriesTemp = new int [nameTemp.length],
+							totSeriesTemp = new int [nameTemp.length]; 
+					for(int j = 0; j < i; j++) {
+						nameTemp [j] = name [j]; 
+						dirTemp [j] = dir [j];
+						seriesTemp [j] = series [j];
+						totSeriesTemp [j] = totSeries [j];
 						
-						for(int j = i+1; j < name.length; j++) {
-							nameTemp [j+nrOfSeriesImages-1] = name [j]; 
-							dirTemp [j+nrOfSeriesImages-1] = dir [j];
-							seriesTemp [j+nrOfSeriesImages-1] = series [j];
-							totSeriesTemp [j+nrOfSeriesImages-1] = totSeries [j];
+					}
+					int k = 0;
+					for(int j = 0; j < nOfSeries; j++) {
+						if(!(","+loadSeries+",").contains(","+(j+1)+",")) {
+							continue;
 						}
-						
-						//copy arrays
+						nameTemp [i+k] = name [i]; 
+						dirTemp [i+k] = dir [i];
+						seriesTemp [i+k] = j;
+						totSeriesTemp [i+k] = nOfSeries;
+						k++;
+					}
+					
+					for(int j = i+1; j < name.length; j++) {
+						nameTemp [j+nrOfSeriesImages-1] = name [j]; 
+						dirTemp [j+nrOfSeriesImages-1] = dir [j];
+						seriesTemp [j+nrOfSeriesImages-1] = series [j];
+						totSeriesTemp [j+nrOfSeriesImages-1] = totSeries [j];
+					}
+					
+					//copy arrays
 
-						tasks = nameTemp.length;
-						name = new String [tasks];
-						dir = new String [tasks];
-						series = new int [tasks];
-						totSeries = new int [tasks];
-						
-						for(int j = 0; j < nameTemp.length; j++) {
-							name [j] = nameTemp [j];
-							dir [j] = dirTemp [j];
-							series [j] = seriesTemp [j];
-							totSeries [j] = totSeriesTemp [j];
+					tasks = nameTemp.length;
+					name = new String [tasks];
+					dir = new String [tasks];
+					series = new int [tasks];
+					totSeries = new int [tasks];
+					
+					for(int j = 0; j < nameTemp.length; j++) {
+						name [j] = nameTemp [j];
+						dir [j] = dirTemp [j];
+						series [j] = seriesTemp [j];
+						totSeries [j] = totSeriesTemp [j];
 //							filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
-						}
-					}					
+					}
 				}
 			} catch (Exception e) {
 				IJ.log(e.getCause().getLocalizedMessage());
@@ -374,14 +375,14 @@ public void run(String arg) {
 //		}
 	
 	
-   	ImagePlus imp, tempImp, mask, tempImp2, outImp;
-   	CompositeImage ci;
+   	ImagePlus imp, tempImp, mask;
+   	CompositeImage outImp;
    	TextPanel tp1;
    	double threshold;
    	Date startDate;
    	LUT [] originalLuts;
    	LUT [] newLuts;
-   	String copyStr;
+   	String sliceLabels [][];
    	int indexOld, indexNew;
    	
 	for(int task = 0; task < tasks; task++){
@@ -496,7 +497,40 @@ public void run(String arg) {
 			
 			//processing
 			progress.updateBarText("Extract channel " + channelID + " ...");
-			tempImp = copyChannel(imp, channelID, false, false);
+			
+			originalLuts = new LUT [imp.getNChannels()];
+			imp.setDisplayMode(IJ.COMPOSITE);
+		   	for(int c = 0; c < imp.getNChannels(); c++){
+		   		imp.setC(c+1);
+		   		originalLuts [c] = imp.getChannelProcessor().getLut();
+		   	}
+		   	
+		   	sliceLabels = new String [imp.getNFrames()][imp.getNSlices()];
+		   	for(int s = 0; s < imp.getNSlices(); s++){
+					for(int f = 0; f < imp.getNFrames(); f++){
+					indexOld = imp.getStackIndex(channelID, s+1, f+1)-1;
+   					try{
+   						if(imp.getStack().getSliceLabel(indexOld+1).equals(null)){
+	   						sliceLabels [f][s] = "Channel " + (channelID) + " S" + (s+1) + "/" + imp.getNSlices() 
+	   							+  " T" + (f+1) + "/" + imp.getNFrames();
+	   					}else if(imp.getStack().getSliceLabel(indexOld+1).isEmpty()){
+	   						sliceLabels [f][s] = "Channel " + (channelID) + " S" + (s+1) + "/" + imp.getNSlices() 
+   							+  " T" + (f+1) + "/" + imp.getNFrames();
+	   					}else{
+	   						sliceLabels [f][s] = imp.getStack().getSliceLabel(indexOld+1);
+	   					}
+   					}catch(Exception e){
+   						sliceLabels [f][s] =  "Channel " + (channelID) + " S" + (s+1) + "/" + imp.getNSlices() 
+							+  " T" + (f+1) + "/" + imp.getNFrames();
+   					}
+				}
+			}
+		   	
+		   	tempImp = copyChannel(imp, channelID, false, false);
+			imp.close();
+			System.gc();
+			imp = tempImp.duplicate();
+			System.gc();
 			Roi regionsAboveZero = null;
 			if(!chosenAlgorithm.equals("CUSTOM threshold")) {
 				if(excludeZeroRegions) {
@@ -566,18 +600,8 @@ public void run(String arg) {
 			progress.addToBar(0.1);
 
 			ImageCalculator ic = new ImageCalculator();
-			tempImp2 = ic.run("AND create", tempImp, mask);
-			
-//			tempImp2.show();
-//			tempImp.show();
-//			mask.show();
-//			new WaitForUserDialog("calc").show();
-//			tempImp2.hide();
-//			tempImp.hide();
-//			mask.hide();	
-			
-		   	tempImp = tempImp2;
-		   		
+			tempImp = ic.run("AND create", tempImp, mask);
+		   	
 //		   	tempImp.show();
 //			new WaitForUserDialog("calc").show();
 //			tempImp.hide();	
@@ -590,7 +614,7 @@ public void run(String arg) {
 			
 			
 			if(includeDuplicateChannel){
-		   		outImp = IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
+		   		outImp = (CompositeImage)IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
 		   				2, imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
 		   		outImp.setCalibration(imp.getCalibration());
 		   		outImp.setDisplayMode(IJ.COMPOSITE);
@@ -602,7 +626,7 @@ public void run(String arg) {
 		   						indexNew = outImp.getStackIndex(1, s+1, f+1)-1;
 		   						outImp.getStack().setVoxel(x, y, indexNew, tempImp.getStack().getVoxel(x, y, indexOld));
    								
-   								indexOld = imp.getStackIndex(channelID, s+1, f+1)-1;
+   								indexOld = imp.getStackIndex(1, s+1, f+1)-1;
 		   						indexNew = outImp.getStackIndex(2, s+1, f+1)-1;
 		   						outImp.getStack().setVoxel(x, y, indexNew, imp.getStack().getVoxel(x, y, indexOld));
 		   					}					
@@ -610,11 +634,9 @@ public void run(String arg) {
 		   			}
 		   		}
 		   		
-		   		originalLuts = new LUT [imp.getNChannels()];
-			   	for(int c = 0; c < imp.getNChannels(); c++){
-			   		imp.setC(c+1);
-			   		originalLuts[c] = imp.getChannelProcessor().getLut();
-			   	}		   		
+		   		tempImp.changes = false;
+				tempImp.close();
+		   		
 			   	newLuts = new LUT [outImp.getNChannels()];
 			   	
 			   	tp1.append("Channels in output image:");
@@ -626,43 +648,24 @@ public void run(String arg) {
 				tp1.append("Channel " + 2 + ":	" + "previous channel " + (channelID) + " (unsegmented)");
 				for(int s = 0; s < outImp.getNSlices(); s++){
    					for(int f = 0; f < outImp.getNFrames(); f++){
-   						indexOld = imp.getStackIndex(channelID, s+1, f+1)-1;
+   						indexNew = outImp.getStackIndex(1, s+1, f+1)-1;
+	   					outImp.getStack().setSliceLabel("segm " + sliceLabels [f][s], indexNew+1);
 	   					indexNew = outImp.getStackIndex(2, s+1, f+1)-1;
-	   					try{
-	   						if(imp.getStack().getSliceLabel(indexOld+1).equals(null)){
-		   						copyStr = "Channel " + (channelID) + " S" + (s+1) + "/" + outImp.getNSlices() 
-		   							+  " T" + (f+1) + "/" + outImp.getNFrames();
-		   					}else if(imp.getStack().getSliceLabel(indexOld+1).isEmpty()){
-		   						copyStr = "Channel " + (channelID) + " S" + (s+1) + "/" + outImp.getNSlices() 
-	   							+  " T" + (f+1) + "/" + outImp.getNFrames();
-		   					}else{
-		   						copyStr = imp.getStack().getSliceLabel(indexOld+1);
-		   					}
-	   					}catch(Exception e){
-	   						copyStr = "Channel " + (channelID) + " S" + (s+1) + "/" + outImp.getNSlices() 
-   							+  " T" + (f+1) + "/" + outImp.getNFrames();
-	   					}				   					
-	   					outImp.getStack().setSliceLabel("segm " + copyStr, indexNew+1);
+	   					outImp.getStack().setSliceLabel("" + sliceLabels [f][s], indexNew+1);
    					}
 				}
 		   		
-		   		ci = (CompositeImage)outImp;
-				ci.setDisplayMode(IJ.COMPOSITE);
-			    ci.setLuts(newLuts);
-				IJ.saveAsTiff(ci, filePrefix + ".tif");
-				ci.changes = false;
-				ci.close();
-		   		tempImp.changes = false;
-				tempImp.close();
+				outImp.setDisplayMode(IJ.COMPOSITE);
+				outImp.setLuts(newLuts);
+				IJ.saveAsTiff(outImp, filePrefix + ".tif");
 				outImp.changes = false;
 				outImp.close();
+				System.gc();
 		   	}else{
 				IJ.saveAsTiff(tempImp, filePrefix + ".tif");	
 				tempImp.changes = false;
 				tempImp.close();
 		   	}
-			tempImp2.changes = false;
-			tempImp2.close();
 			mask.changes = false;
 			mask.close();
 		   	
@@ -670,8 +673,6 @@ public void run(String arg) {
 			tp1.saveAs(filePrefix + ".txt");			
 
 			progress.updateBarText("Finished ...");
-		   
-			
 			System.gc();
 			
 			/******************************************************************
@@ -963,6 +964,10 @@ private static ImagePlus copyChannel(ImagePlus imp, int channel, boolean adjustD
 	}
 	if(adjustDisplayRangeTo16bit)	impNew.setDisplayRange(0, 4095);
 	if(copyOverlay)	impNew.setOverlay(imp.getOverlay().duplicate());
+	
+	imp.setC(channel);
+   	impNew.setLut(imp.getChannelProcessor().getLut());
+	
 	impNew.setCalibration(imp.getCalibration());
 	return impNew;
 }
@@ -1051,4 +1056,14 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 	}
 	tp.append("");
 }
+
+/**
+ * get number of series 
+ * */
+private int getNumberOfSeries(ImporterOptions options) throws FormatException, IOException{
+	ImportProcess process = new ImportProcess(options);
+	if (!process.execute()) return -1;
+	return process.getSeriesCount();
+}
+
 }//end main class
