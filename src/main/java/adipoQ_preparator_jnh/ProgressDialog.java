@@ -47,6 +47,21 @@ public class ProgressDialog extends javax.swing.JFrame implements ActionListener
 		task = 1;
 	}
 	
+	public ProgressDialog(String [] taskList, int [] seriesList, int newTasks, int addToSeriesNumber) {
+		super();
+		initGUI();
+		dataLeft = taskList.clone();
+		tasks = newTasks;
+		for(int i = 0; i < tasks; i++){
+			if(dataLeft[i]!=""){
+				dataLeft [i] = (i+1) + ": " + dataLeft [i] + ", series " + (seriesList [i] + addToSeriesNumber); 
+			}
+		}
+		ListeLeft.setListData(dataLeft);
+		taskFraction = 0.0;
+		task = 1;
+	}
+	
 	private void initGUI() {
 		int prefXSize = 600, prefYSize = 500;
 		this.setMinimumSize(new java.awt.Dimension(prefXSize, prefYSize+40));

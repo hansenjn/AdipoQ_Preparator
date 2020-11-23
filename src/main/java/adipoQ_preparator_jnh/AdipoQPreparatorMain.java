@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.3
+* AdipoQ Preparator Version 0.0.4
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: November 04, 2020)
+* Date: October 13, 2020 (This Version: November 23, 2020)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -48,7 +48,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.3";
+	static final String PLUGINVERSION = "0.0.4";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -121,8 +121,11 @@ public void run(String arg) {
 	
 
 	gd.setInsets(10,0,0);	gd.addStringField("Series to be processed (if multi-series files are loaded via BioFormats plugin)", loadSeries);
-	gd.setInsets(0,0,0);	gd.addMessage("Note: If not 'ALL' series shall be processed, enter the series numbers separated by commas.", InstructionsFont);
+	gd.setInsets(0,0,0);	gd.addMessage("Notes:", InstructionsFont);
+	gd.setInsets(0,0,0);	gd.addMessage("1. If not 'ALL' series shall be processed, enter the series numbers separated by commas.", InstructionsFont);
 	gd.setInsets(0,0,0);	gd.addMessage("E.g., entering '1,7' will process series 1 and 7.", InstructionsFont);
+	gd.setInsets(0,0,0);	gd.addMessage("2. If iamges from a Zeiss Slide Scanner shall be analyzed and only the best-resolved images shall be used,", InstructionsFont);
+	gd.setInsets(0,0,0);	gd.addMessage("enter 'SLIDESCANNER'.", InstructionsFont);
 	
 	gd.setInsets(10,0,0);	gd.addChoice("Preferences: ", settingsMethod, selectedSettingsVariant);
 	gd.setInsets(0,0,0);	gd.addMessage("Note: loading settings from previous analysis not yet implemented.", InstructionsFont);
@@ -241,6 +244,7 @@ public void run(String arg) {
 	int totSeries [] = new int [tasks];
 	Arrays.fill(series, 0);
 	Arrays.fill(totSeries, 1);
+	String loadSeriesTemp;
 
 //	String filesList = "Files to process:\n";
 	if(selectedTaskVariant.equals(taskVariant[1])){
@@ -257,10 +261,10 @@ public void run(String arg) {
 				bfOptions.setId(""+dir[i]+name[i]+"");
 				bfOptions.setVirtual(true);
 				
-				int nOfSeries = this.getNumberOfSeries(bfOptions);
+				int nOfSeries = getNumberOfSeries(bfOptions);
 //				IJ.log("nSeries: " + nOfSeries);
 				
-				if(loadSeries.equals("ALL") && nOfSeries > 1 ) {
+				if(loadSeries.equals("ALL") && nOfSeries > 1) {
 					String [] nameTemp = new String [name.length+nOfSeries-1], 
 							dirTemp = new String [name.length+nOfSeries-1];
 					int [] seriesTemp = new int [nameTemp.length],
@@ -299,8 +303,37 @@ public void run(String arg) {
 						totSeries [j] = totSeriesTemp [j];
 //							filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
 					}
-				}else {
-					int nrOfSeriesImages = StringUtils.countMatches(loadSeries,",")+1;
+				}else if(nOfSeries > 1){
+					if(loadSeries.equals("SLIDESCANNER")){
+						//TODO
+						loadSeriesTemp = "";
+						for(int ser = 0; ser < nOfSeries; ser++) {
+							if(getSeriesName(bfOptions, ser).startsWith("Series_" + (ser+1) + ": " + name[i])) {
+								if(ser == 0 || (getWidthHeigth(bfOptions, ser)[0] > getWidthHeigth(bfOptions, ser-1)[0]
+										&& getWidthHeigth(bfOptions, ser)[1] > getWidthHeigth(bfOptions, ser-1)[1])
+										&& getSeriesName(bfOptions, ser-1).startsWith("Series_" + (ser) + ": " + name[i])) {
+									if(loadSeriesTemp.length() == 0) {
+										loadSeriesTemp = "" + (ser+1);
+									}else {
+										loadSeriesTemp += "," + (ser+1);
+									}
+//								}else {
+//									IJ.log("Name not matched " + ser + ": code = " 
+//											+ getWidthHeigth(bfOptions, ser)[0] + ">" + getWidthHeigth(bfOptions, ser-1)[0] 
+//													+ " and " + getWidthHeigth(bfOptions, ser)[1]  + ">"
+//											+ getWidthHeigth(bfOptions, ser-1)[1] + " and " 
+//													+ getSeriesName(bfOptions, ser-1).startsWith("Series_" + (ser) + ": " + name[i]));
+								}
+//							}else {
+//								IJ.log("Name not matched " + ser + ": title = " + getSeriesName(bfOptions, ser) + " vs name = " + name[i]);
+							}
+						}
+						IJ.log("LoadSeriesTemp: " + loadSeriesTemp);
+					}else {
+						loadSeriesTemp = loadSeries;						
+					}
+					
+					int nrOfSeriesImages = StringUtils.countMatches(loadSeriesTemp,",")+1;
 					String [] nameTemp = new String [name.length+nrOfSeriesImages-1], 
 							dirTemp = new String [name.length+nrOfSeriesImages-1];
 					int [] seriesTemp = new int [nameTemp.length],
@@ -314,7 +347,7 @@ public void run(String arg) {
 					}
 					int k = 0;
 					for(int j = 0; j < nOfSeries; j++) {
-						if(!(","+loadSeries+",").contains(","+(j+1)+",")) {
+						if(!(","+loadSeriesTemp+",").contains(","+(j+1)+",")) {
 							continue;
 						}
 						nameTemp [i+k] = name [i]; 
@@ -357,7 +390,7 @@ public void run(String arg) {
 	
 	
 	//add progressDialog
-		progress = new ProgressDialog(name, tasks);
+		progress = new ProgressDialog(name, series, tasks, 1);
 		progress.setLocation(0,0);
 		progress.setVisible(true);
 		progress.addWindowListener(new java.awt.event.WindowAdapter() {
@@ -1066,4 +1099,21 @@ private int getNumberOfSeries(ImporterOptions options) throws FormatException, I
 	return process.getSeriesCount();
 }
 
+/**
+ * @return width and height of a specific @param series (0 <= series < number of series)
+ * */
+private int [] getWidthHeigth(ImporterOptions options, int series) throws FormatException, IOException{
+	ImportProcess process = new ImportProcess(options);
+	if (!process.execute()) return new int [] {-1, -1};
+	return new int [] {process.getCropRegion(series).width, process.getCropRegion(series).height};
+}
+
+/**
+ * @return name of the @param series (0 <= series < number of series)
+ * */
+private String getSeriesName(ImporterOptions options, int series) throws FormatException, IOException{
+	ImportProcess process = new ImportProcess(options);
+	if (!process.execute()) return "NaN";
+	return process.getSeriesLabel(series);
+}
 }//end main class
