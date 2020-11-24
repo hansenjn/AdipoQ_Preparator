@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.4
+* AdipoQ Preparator Version 0.0.5
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: November 23, 2020)
+* Date: October 13, 2020 (This Version: November 24, 2020)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -48,7 +48,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.4";
+	static final String PLUGINVERSION = "0.0.5";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -245,6 +245,7 @@ public void run(String arg) {
 	Arrays.fill(series, 0);
 	Arrays.fill(totSeries, 1);
 	String loadSeriesTemp;
+	String removedFiles = "\n";
 
 //	String filesList = "Files to process:\n";
 	if(selectedTaskVariant.equals(taskVariant[1])){
@@ -333,51 +334,99 @@ public void run(String arg) {
 						loadSeriesTemp = loadSeries;						
 					}
 					
-					int nrOfSeriesImages = StringUtils.countMatches(loadSeriesTemp,",")+1;
-					String [] nameTemp = new String [name.length+nrOfSeriesImages-1], 
-							dirTemp = new String [name.length+nrOfSeriesImages-1];
-					int [] seriesTemp = new int [nameTemp.length],
-							totSeriesTemp = new int [nameTemp.length]; 
-					for(int j = 0; j < i; j++) {
-						nameTemp [j] = name [j]; 
-						dirTemp [j] = dir [j];
-						seriesTemp [j] = series [j];
-						totSeriesTemp [j] = totSeries [j];
-						
-					}
-					int k = 0;
+
+					int nrOfSeriesImages = 0;
 					for(int j = 0; j < nOfSeries; j++) {
 						if(!(","+loadSeriesTemp+",").contains(","+(j+1)+",")) {
 							continue;
 						}
-						nameTemp [i+k] = name [i]; 
-						dirTemp [i+k] = dir [i];
-						seriesTemp [i+k] = j;
-						totSeriesTemp [i+k] = nOfSeries;
-						k++;
+						nrOfSeriesImages++;
 					}
 					
-					for(int j = i+1; j < name.length; j++) {
-						nameTemp [j+nrOfSeriesImages-1] = name [j]; 
-						dirTemp [j+nrOfSeriesImages-1] = dir [j];
-						seriesTemp [j+nrOfSeriesImages-1] = series [j];
-						totSeriesTemp [j+nrOfSeriesImages-1] = totSeries [j];
-					}
-					
-					//copy arrays
 
-					tasks = nameTemp.length;
-					name = new String [tasks];
-					dir = new String [tasks];
-					series = new int [tasks];
-					totSeries = new int [tasks];
-					
-					for(int j = 0; j < nameTemp.length; j++) {
-						name [j] = nameTemp [j];
-						dir [j] = dirTemp [j];
-						series [j] = seriesTemp [j];
-						totSeries [j] = totSeriesTemp [j];
-//							filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
+					if(nrOfSeriesImages>0) {
+						//ADD SERIES TO LIST
+						String [] nameTemp = new String [name.length+nrOfSeriesImages-1], 
+								dirTemp = new String [name.length+nrOfSeriesImages-1];
+						int [] seriesTemp = new int [nameTemp.length],
+								totSeriesTemp = new int [nameTemp.length]; 
+						for(int j = 0; j < i; j++) {
+							nameTemp [j] = name [j]; 
+							dirTemp [j] = dir [j];
+							seriesTemp [j] = series [j];
+							totSeriesTemp [j] = totSeries [j];
+							
+						}
+						int k = 0;
+						for(int j = 0; j < nOfSeries; j++) {
+							if(!(","+loadSeriesTemp+",").contains(","+(j+1)+",")) {
+								continue;
+							}
+							nameTemp [i+k] = name [i]; 
+							dirTemp [i+k] = dir [i];
+							seriesTemp [i+k] = j;
+							totSeriesTemp [i+k] = nOfSeries;
+							k++;
+						}
+						
+						for(int j = i+1; j < name.length; j++) {
+							nameTemp [j+nrOfSeriesImages-1] = name [j]; 
+							dirTemp [j+nrOfSeriesImages-1] = dir [j];
+							seriesTemp [j+nrOfSeriesImages-1] = series [j];
+							totSeriesTemp [j+nrOfSeriesImages-1] = totSeries [j];
+						}
+						
+						//copy arrays
+
+						tasks = nameTemp.length;
+						name = new String [tasks];
+						dir = new String [tasks];
+						series = new int [tasks];
+						totSeries = new int [tasks];
+						
+						for(int j = 0; j < nameTemp.length; j++) {
+							name [j] = nameTemp [j];
+							dir [j] = dirTemp [j];
+							series [j] = seriesTemp [j];
+							totSeries [j] = totSeriesTemp [j];
+//								filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
+						}
+					}else {
+						//REMOVE NAME FROM LIST
+						removedFiles += name [i] + "\n";
+						String [] nameTemp = new String [name.length-1], 
+								dirTemp = new String [name.length-1];
+						int [] seriesTemp = new int [nameTemp.length],
+								totSeriesTemp = new int [nameTemp.length]; 
+						for(int j = 0; j < i; j++) {
+							nameTemp [j] = name [j]; 
+							dirTemp [j] = dir [j];
+							seriesTemp [j] = series [j];
+							totSeriesTemp [j] = totSeries [j];
+							
+						}
+						for(int j = i+1; j < name.length; j++) {
+							nameTemp [j-1] = name [j]; 
+							dirTemp [j-1] = dir [j];
+							seriesTemp [j-1] = series [j];
+							totSeriesTemp [j-1] = totSeries [j];
+						}
+						
+						//copy arrays
+
+						tasks = nameTemp.length;
+						name = new String [tasks];
+						dir = new String [tasks];
+						series = new int [tasks];
+						totSeries = new int [tasks];
+						
+						for(int j = 0; j < nameTemp.length; j++) {
+							name [j] = nameTemp [j];
+							dir [j] = dirTemp [j];
+							series [j] = seriesTemp [j];
+							totSeries [j] = totSeriesTemp [j];
+//								filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
+						}
 					}
 				}
 			} catch (Exception e) {
@@ -388,6 +437,10 @@ public void run(String arg) {
 		}
 	}
 	
+	if(tasks == 0) {
+		new WaitForUserDialog("The series preference '" + loadSeries + "' did not fit to any file to be processed - Plugin cancelled.").show();
+		return;
+	}
 	
 	//add progressDialog
 		progress = new ProgressDialog(name, series, tasks, 1);
@@ -402,6 +455,12 @@ public void run(String arg) {
 	        	return;
 	        }
 		});
+		
+		if(removedFiles.length()>1) {
+			progress.notifyMessage("For some files, the series preference '" 
+					+ loadSeries + "' did not fit - these files were excluded from analysis:" 
+					+ removedFiles + "", ProgressDialog.NOTIFICATION);			
+		}
 		
 //		if(selectedTaskVariant.equals(taskVariant[1])){
 //			progress.notifyMessage(filesList, ProgressDialog.LOG);	

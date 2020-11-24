@@ -6,7 +6,8 @@ package adipoQ_preparator_jnh;
  * adding an function to select files containing certain pattern (regex or
  * non-regex) in all subdirectories of a chosen root directory.
  * 
- * Parts of the code were inherited from MotiQ (https://github.com/hansenjn/MotiQ).
+ * Parts of the code were inherited from MotiQ (https://github.com/hansenjn/MotiQ)
+ * and CiliaQ (https://github.com/hansenjn/CiliaQ).
  * 
  * @author Jan Niklas Hansen and Sebastian Rassmann *
  */
