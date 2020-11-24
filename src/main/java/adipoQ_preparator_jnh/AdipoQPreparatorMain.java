@@ -304,7 +304,7 @@ public void run(String arg) {
 						totSeries [j] = totSeriesTemp [j];
 //							filesList += name[j] + "\t" + dir[j] + "\t" + series[j] + "\t" + totSeries[j] + "\n";
 					}
-				}else if(nOfSeries > 1){
+				}else if(!loadSeries.equals("ALL")){
 					if(loadSeries.equals("SLIDESCANNER")){
 						//TODO
 						loadSeriesTemp = "";
