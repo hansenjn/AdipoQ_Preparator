@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.5
+* AdipoQ Preparator Version 0.0.6
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: November 24, 2020)
+* Date: October 13, 2020 (This Version: January 19, 2021)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -48,7 +48,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.5";
+	static final String PLUGINVERSION = "0.0.6";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -246,7 +246,7 @@ public void run(String arg) {
 	Arrays.fill(totSeries, 1);
 	String loadSeriesTemp;
 	String removedFiles = "\n";
-
+	
 //	String filesList = "Files to process:\n";
 	if(selectedTaskVariant.equals(taskVariant[1])){
 		for(int i = tasks-1; i >= 0; i--){
@@ -476,8 +476,10 @@ public void run(String arg) {
    	LUT [] newLuts;
    	String sliceLabels [][];
    	int indexOld, indexNew;
-   	
+
+	boolean backgroundPref = Prefs.blackBackground;
 	for(int task = 0; task < tasks; task++){
+		Prefs.blackBackground =  true;
 		running: while(continueProcessing){
 			startDate = new Date();
 			progress.updateBarText("in progress...");
@@ -784,6 +786,7 @@ public void run(String arg) {
 		progress.setBar(1.0);
 		progress.moveTask(task);
 	}
+	Prefs.blackBackground = backgroundPref;
 }
 
 /**
