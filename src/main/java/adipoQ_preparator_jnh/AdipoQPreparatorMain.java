@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.6
+* AdipoQ Preparator Version 0.0.7
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: January 19, 2021)
+* Date: October 13, 2020 (This Version: January 21, 2021)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -29,8 +29,6 @@ import java.util.*;
 import java.text.*;
 
 import javax.swing.UIManager;
-
-import org.apache.commons.lang.StringUtils;
 
 import ij.*;
 import ij.gui.*;
@@ -48,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.6";
+	static final String PLUGINVERSION = "0.0.7";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -87,12 +85,14 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	boolean excludeZeroRegions = true;
 	double closeGapsRadius = 5.0;
 	double removeRadius = 20.0;
+	double linkGapsForRemoveRadius = 5.0;
 	String [] algorithm = {"Default", "IJ_IsoData", "Huang", "Intermodes", "IsoData", "Li", "MaxEntropy", "Mean", 
 			"MinError", "Minimum", "Moments", "Otsu", "Percentile", "RenyiEntropy", "Shanbhag", "Triangle", 
 			"Yen", "CUSTOM threshold"};
 	String chosenAlgorithm = "Triangle";
 	double customThr = 0.0;
 	boolean despeckle = true;
+	boolean linkForROI = false;
 	boolean fillHoles = true;
 	
 	static final String[] outputVariant = {"save as filename + suffix 'AQP'", "save as filename + suffix 'AQP' + date"};
@@ -306,7 +306,6 @@ public void run(String arg) {
 					}
 				}else if(!loadSeries.equals("ALL")){
 					if(loadSeries.equals("SLIDESCANNER")){
-						//TODO
 						loadSeriesTemp = "";
 						for(int ser = 0; ser < nOfSeries; ser++) {
 							if(getSeriesName(bfOptions, ser).startsWith("Series_" + (ser+1) + ": " + name[i])) {
@@ -676,6 +675,8 @@ public void run(String arg) {
 				progress.addToBar(0.15);
 			}			
 
+		   	tempImp.deleteRoi();
+			
 			if(despeckle) {
 				progress.updateBarText("Despeckle mask");
 				IJ.run(tempImp, "Despeckle", "");
@@ -684,28 +685,36 @@ public void run(String arg) {
 			progress.addToBar(0.1);
 			
 			progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius) + " px)...");
-			mask = getFillHolesAndRemoveNoise(tempImp, removeRadius);
-
-			progress.addToBar(0.1);
+			mask = getFillHolesAndRemoveNoise(tempImp, linkGapsForRemoveRadius, removeRadius);
 			
-			progress.updateBarText("Invert image...");
-			IJ.run(tempImp, "Invert", "");
-
 			progress.addToBar(0.1);
 
-			ImageCalculator ic = new ImageCalculator();
-			tempImp = ic.run("AND create", tempImp, mask);
-		   	
 //		   	tempImp.show();
 //			new WaitForUserDialog("calc").show();
 //			tempImp.hide();	
+			
+		   	progress.updateBarText("Invert image...");
+//				IJ.run(tempImp, "Invert", "");
+			tempImp.getProcessor().invert();
+
+//		   	tempImp.show();
+//			new WaitForUserDialog("calc").show();
+//			tempImp.hide();	
+			
+			progress.addToBar(0.1);
+			
+			ImageCalculator ic = new ImageCalculator();
+			tempImp = ic.run("AND create", tempImp, mask);
 
 			progress.addToBar(0.1);
 		   	
 			if(fillHoles) {
 				IJ.run(tempImp, "Fill Holes", "");
 			}
-			
+
+//		   	tempImp.show();
+//			new WaitForUserDialog("calc").show();
+//			tempImp.hide();	
 			
 			if(includeDuplicateChannel){
 		   		outImp = (CompositeImage)IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
@@ -760,9 +769,10 @@ public void run(String arg) {
 				tempImp.changes = false;
 				tempImp.close();
 		   	}
+
 			mask.changes = false;
 			mask.close();
-		   	
+			
 		   	addFooter(tp1, startDate);				
 			tp1.saveAs(filePrefix + ".txt");			
 
@@ -868,10 +878,20 @@ private void setRegionsOutsideRoiToZero(ImagePlus imp, int channel, Roi regionRo
 /**
  * Fill Holes and close gaps (using @param closeHolesRadius) in ImagePlus @param imp.
  * */
-private ImagePlus getFillHolesAndRemoveNoise(ImagePlus imp, double closeHolesRadius){
+private ImagePlus getFillHolesAndRemoveNoise(ImagePlus imp, double closeGapsRadius, double closeHolesRadius){
 	ImagePlus tempImp = imp.duplicate();
-	IJ.run(tempImp, "Fill Holes", "");
 
+	if(linkForROI) {
+		IJ.run(tempImp, "Maximum...", "radius=" + dfDialog.format(closeGapsRadius));
+	}
+	
+	IJ.run(tempImp, "Fill Holes", "");
+	
+	if(linkForROI) {
+		IJ.run(tempImp, "Minimum...", "radius=" + dfDialog.format(closeGapsRadius));
+		
+	}
+	
 	IJ.run(tempImp, "Minimum...", "radius=" + dfDialog.format(closeHolesRadius));
 	IJ.run(tempImp, "Maximum...", "radius=" + dfDialog.format(closeHolesRadius));
 	
@@ -899,6 +919,8 @@ private boolean importSettings() {
 	excludeZeroRegions = false;
 	includeDuplicateChannel = false;
 	despeckle = false;
+	linkForROI = false;
+	removeRadius = -1.0;
 	
 	IJ.log("READING PREFERENCES:");
 	try {
@@ -956,11 +978,23 @@ private boolean importSettings() {
 					}
 				}
 				
-				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions (px)")){
+					
+					if(line.contains("Close gaps for detecting tissue regions (px):")){
+						tempString = line.substring(line.lastIndexOf("	")+1);
+						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+						linkForROI = true;
+						linkGapsForRemoveRadius = Double.parseDouble(tempString);
+						
+						IJ.log("Close gaps for detecting tissue regions rad = " + linkGapsForRemoveRadius);						
+					}
+				
+				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions (px)") 
+						|| line.contains("Auto detect the region of interest - radius of exluded regions (px)")){
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					removeRadius = Double.parseDouble(tempString);
-					IJ.log("Close gaps in adipose tissue regions rad = " + removeRadius);						
+					
+					IJ.log("Auto detect - exclude regions (px) = " + removeRadius);						
 				}
 				if(line.contains("Despeckle mask")){
 					despeckle = true;
@@ -977,6 +1011,10 @@ private boolean importSettings() {
 	}catch (IOException e) {
 		IJ.error("Problem with loading preferences");
 		e.printStackTrace();
+		return false;
+	}
+	if(removeRadius == -1) {
+		IJ.error("Problem with loading preferences - removeRadius missing");
 		return false;
 	}
 	return true;
@@ -1001,9 +1039,14 @@ private boolean enterSettings() {
 	
 	gd.setInsets(0,10,0);		gd.addCheckbox("Despeckle segmented image", despeckle);
 
-	gd.setInsets(0,10,0);		gd.addCheckbox("Fill holes in segmented image", fillHoles);
+	gd.setInsets(0,10,0);	gd.addCheckbox("Close gaps for detecting tissue region | distance", linkForROI);
+	gd.setInsets(-23,100,0);	gd.addNumericField("", linkGapsForRemoveRadius, 2);
 	
 	gd.setInsets(0,10,0);		gd.addNumericField("Radius of particles to be removed as noise while detecting adipose tissue regions", removeRadius, 2);
+	
+	gd.setInsets(0,10,0);		gd.addCheckbox("Fill holes in segmented image", fillHoles);
+	
+	
 	
 	gd.showDialog();
 	//show Dialog-----------------------------------------------------------------
@@ -1017,8 +1060,10 @@ private boolean enterSettings() {
 		chosenAlgorithm = gd.getNextChoice();
 		customThr = gd.getNextNumber();
 		despeckle = gd.getNextBoolean();
-		fillHoles = gd.getNextBoolean();
+		linkForROI = gd.getNextBoolean();
+		linkGapsForRemoveRadius = gd.getNextNumber();
 		removeRadius = gd.getNextNumber();
+		fillHoles = gd.getNextBoolean();
 	}
 	System.gc();
 	//read and process variables--------------------------------------------------
@@ -1143,11 +1188,19 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			tp.append("	Despeckle mask");
 		}else{tp.append("");}
 		
+		if(linkForROI){
+			tp.append("	Close gaps for detecting tissue regions (px):	" + df6.format(linkGapsForRemoveRadius));
+		}else{tp.append("");}		
+		
+		
+		tp.append("	Auto detect the region of interest - radius of exluded regions (px):	" + df6.format(removeRadius));
+				
 		if(fillHoles){
 			tp.append("	Fill holes in mask");
 		}else{tp.append("");}		
 		
-		tp.append("	Radius of particles to be removed as noise while detecting adipose tissue regions (px):	" + df6.format(removeRadius));
+		
+				
 	}
 	tp.append("");
 }
