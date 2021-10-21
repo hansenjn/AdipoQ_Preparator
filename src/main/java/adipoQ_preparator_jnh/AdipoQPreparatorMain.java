@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.0.7
+* AdipoQ Preparator Version 0.1.0
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: January 21, 2021)
+* Date: October 13, 2020 (This Version: October 19, 2021)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -46,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.0.7";
+	static final String PLUGINVERSION = "0.1.0";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -75,15 +75,24 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	String selectedTaskVariant = taskVariant[1];
 	int tasks = 1;
 
-	final static String[] settingsMethod = {"manually enter preferences", "load preferences from existing AdipoQ Preparator metadata file"};
+	final static String[] settingsMethod = {"manually enter preferences (show default settings for histology)", "manually enter preferences (show default settings for cultured cells)", "load preferences from existing AdipoQ Preparator metadata file"};
 	String selectedSettingsVariant = settingsMethod [0];
 	
 	String loadSeries = "ALL";
 	
-	int channelID = 1;
+//	int channelID = 1;
+	int channelIDs [] = new int []{1};
 	boolean includeDuplicateChannel = true;
+	boolean deleteOtherChannels = true;
+
+	boolean preBlur = true;
+	double preBlurSigma = 2.0;
+	boolean subtractBluredImage = true;
+	double subtractBlurSigma = 3.0;
+	
 	boolean excludeZeroRegions = true;
 	double closeGapsRadius = 5.0;
+	boolean removeParticles = true;
 	double removeRadius = 20.0;
 	double linkGapsForRemoveRadius = 5.0;
 	String [] algorithm = {"Default", "IJ_IsoData", "Huang", "Intermodes", "IsoData", "Li", "MaxEntropy", "Mean", 
@@ -91,15 +100,23 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 			"Yen", "CUSTOM threshold"};
 	String chosenAlgorithm = "Triangle";
 	double customThr = 0.0;
+	boolean darkBackground = false;
+	final static String[] bgMethod = {"detect bright structures (dark background; e.g. immunofluorescence image)", "detect dark structures (bright background; e.g. histology)"};
+	String selectedBgVariant = bgMethod [0];
+	
 	boolean despeckle = true;
 	boolean linkForROI = false;
 	boolean fillHoles = true;
-	
+	boolean watershed = false;
+		
 	static final String[] outputVariant = {"save as filename + suffix 'AQP'", "save as filename + suffix 'AQP' + date"};
 	String chosenOutputName = outputVariant[0];
 	
 	static final String[] nrFormats = {"US (0.00...)", "Germany (0,00...)"};
 	String ChosenNumberFormat = nrFormats[0];		
+
+	Robot robo;
+	boolean keepAwake = false;
 	//-----------------define params-----------------
 	
 	//Variables for processing of an individual task
@@ -133,6 +150,7 @@ public void run(String arg) {
 	gd.setInsets(10,0,0);	gd.addMessage("GENERAL SETTINGS:", HeadingFont);	
 	gd.setInsets(5,0,0);	gd.addChoice("Output image name: ", outputVariant, chosenOutputName);
 	gd.setInsets(5,0,0);	gd.addChoice("output number format", nrFormats, nrFormats[0]);
+	gd.setInsets(5,0,0);	gd.addCheckbox("Keep computer awake during processing", keepAwake);
 	
 	gd.showDialog();
 	//show Dialog-----------------------------------------------------------------
@@ -153,11 +171,23 @@ public void run(String arg) {
 		df3.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.GERMANY));
 		df0.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.GERMANY));
 	}
+	keepAwake = gd.getNextBoolean();
 	//read and process variables--------------------------------------------------
 	if (gd.wasCanceled()) return;
 	
 	if(selectedSettingsVariant.equals(settingsMethod [0])){
-		if(!enterSettings()) {
+		/** HISTOLOGY */
+		if(!enterSettings(0)) {
+			return;
+		}
+	}else if(selectedSettingsVariant.equals(settingsMethod [1])){
+		/** CULTURED CELLS - DAPI */
+		if(!enterSettings(1)) {
+			return;
+		}
+	}else if(selectedSettingsVariant.equals(settingsMethod [1])){
+		/** CULTURED CELLS - CELL CULTURE */
+		if(!enterSettings(2)) {
 			return;
 		}
 	}else if(!importSettings()) {
@@ -477,6 +507,16 @@ public void run(String arg) {
    	int indexOld, indexNew;
 
 	boolean backgroundPref = Prefs.blackBackground;
+	
+	if(keepAwake) {
+   		try {
+			robo = new Robot();
+		} catch (AWTException e) {
+			keepAwake = false;
+			progress.notifyMessage("Robot that moves the mouse to keep the computer awake could not be hired - Stay-awake-mode was disabled.", ProgressDialog.NOTIFICATION);
+		}
+   	}
+		
 	for(int task = 0; task < tasks; task++){
 		Prefs.blackBackground =  true;
 		running: while(continueProcessing){
@@ -550,7 +590,7 @@ public void run(String arg) {
 				progress.moveTask(task);	
 				break running;
 			}			
-			if(channelID < 1 || channelID > imp.getNChannels()) {
+			if(channelIDs [0] < 1 || channelIDs [0] > imp.getNChannels()) {
 				progress.notifyMessage("Task " + (task+1) + "/" + tasks + ": Could not be processed. Selected channel does not exist in the image!"
 						+ " Select a channel number between 1 and the total number of channels in the image.", ProgressDialog.ERROR);
 				progress.moveTask(task);	
@@ -589,7 +629,7 @@ public void run(String arg) {
 			tp1.append("");
 			
 			//processing
-			progress.updateBarText("Extract channel " + channelID + " ...");
+			progress.updateBarText("Extract channel " + channelIDs [0] + " ...");
 			
 			originalLuts = new LUT [imp.getNChannels()];
 			imp.setDisplayMode(IJ.COMPOSITE);
@@ -601,183 +641,455 @@ public void run(String arg) {
 		   	sliceLabels = new String [imp.getNFrames()][imp.getNSlices()];
 		   	for(int s = 0; s < imp.getNSlices(); s++){
 					for(int f = 0; f < imp.getNFrames(); f++){
-					indexOld = imp.getStackIndex(channelID, s+1, f+1)-1;
+					indexOld = imp.getStackIndex(channelIDs [0], s+1, f+1)-1;
    					try{
    						if(imp.getStack().getSliceLabel(indexOld+1).equals(null)){
-	   						sliceLabels [f][s] = "Channel " + (channelID) + " S" + (s+1) + "/" + imp.getNSlices() 
+	   						sliceLabels [f][s] = "Channel " + (channelIDs [0]) + " S" + (s+1) + "/" + imp.getNSlices() 
 	   							+  " T" + (f+1) + "/" + imp.getNFrames();
 	   					}else if(imp.getStack().getSliceLabel(indexOld+1).isEmpty()){
-	   						sliceLabels [f][s] = "Channel " + (channelID) + " S" + (s+1) + "/" + imp.getNSlices() 
+	   						sliceLabels [f][s] = "Channel " + (channelIDs [0]) + " S" + (s+1) + "/" + imp.getNSlices() 
    							+  " T" + (f+1) + "/" + imp.getNFrames();
 	   					}else{
 	   						sliceLabels [f][s] = imp.getStack().getSliceLabel(indexOld+1);
 	   					}
    					}catch(Exception e){
-   						sliceLabels [f][s] =  "Channel " + (channelID) + " S" + (s+1) + "/" + imp.getNSlices() 
+   						sliceLabels [f][s] =  "Channel " + (channelIDs [0]) + " S" + (s+1) + "/" + imp.getNSlices() 
 							+  " T" + (f+1) + "/" + imp.getNFrames();
    					}
 				}
 			}
 		   	
-		   	tempImp = copyChannel(imp, channelID, false, false);
-			imp.close();
-			System.gc();
-			imp = tempImp.duplicate();
-			System.gc();
-			Roi regionsAboveZero = null;
-			if(!chosenAlgorithm.equals("CUSTOM threshold")) {
-				if(excludeZeroRegions) {
-					progress.updateBarText("get non-zero-pixel ROI (close-gaps radius = " + dfDialog.format(closeGapsRadius) + ")...");
-					regionsAboveZero = getRegionsAboveZeroAsROI(tempImp, 1, closeGapsRadius);	
-//					tp1.append("Close gaps radius for non-zero-pixel ROI	" + df6.format(closeGapsRadius));	
-					tempImp.setRoi(regionsAboveZero);
-					//save ROI
-					RoiEncoder re;
-					try{	
-						re = new RoiEncoder(filePrefix + "_ROI.roi");					
-						re.write(regionsAboveZero);				
-					}catch(Exception e){
-						IJ.error("Failed to correctly save rois!");
-					}
-				}
+		   	tempImp = copyChannel(imp, channelIDs [0], false, false);
+			if(deleteOtherChannels) {
+			   	imp.close();
+				imp = tempImp.duplicate();				
+			}
+			
+   			if(keepAwake) {
+				stayAwake();
+			}
+   			
+//   		tempImp.show();
+//			new WaitForUserDialog("before blur").show();
+//			tempImp.hide();
+			
+			if(preBlur) {
+				progress.updateBarText("Bluring image ...");
+				tempImp.getProcessor().blurGaussian(preBlurSigma);
+				progress.addToBar(0.1);
 				
+//				tempImp.show();
+//				new WaitForUserDialog("blurred").show();
+//				tempImp.hide();
+			}
+			
+			if(subtractBluredImage) {
+				progress.updateBarText("Subtract blured image ...");
+				tempImp = subtractABluredImage(tempImp, subtractBlurSigma);
+				progress.addToBar(0.1);
+
+//				tempImp.show();
+//				new WaitForUserDialog("blur substr").show();
+//				tempImp.hide();
+			}
+		
+   			if(keepAwake) {
+				stayAwake();
+			}
+			
+   			
+			Roi regionsAboveZero = null;
+			if(excludeZeroRegions) {
+				progress.updateBarText("get non-zero-pixel ROI (close-gaps radius = " + dfDialog.format(closeGapsRadius) + ")...");
+				regionsAboveZero = getRegionsAboveZeroAsROI(tempImp, 1, closeGapsRadius);	
+//				tp1.append("Close gaps radius for non-zero-pixel ROI	" + df6.format(closeGapsRadius));	
+				tempImp.setRoi(regionsAboveZero);
+				//save ROI
+				RoiEncoder re;
+				try{	
+					re = new RoiEncoder(filePrefix + "_ROI.roi");					
+					re.write(regionsAboveZero);				
+				}catch(Exception e){
+					IJ.error("Failed to correctly save rois!");
+				}
+			}
+			
+			if(!chosenAlgorithm.equals("CUSTOM threshold")) {				
 //				tempImp.show();
 //				new WaitForUserDialog("before thr").show();
 //				tempImp.hide();
-//				
 				progress.updateBarText("Determine threshold using " + chosenAlgorithm + " ...");
-				threshold = getSingleSliceImageThresholds(tempImp, 1, chosenAlgorithm, false)[1];
+				if(darkBackground) {
+					threshold = getSingleSliceImageThresholds(tempImp, 1, chosenAlgorithm, darkBackground)[0];
+				}else {
+					threshold = getSingleSliceImageThresholds(tempImp, 1, chosenAlgorithm, darkBackground)[1];					
+				}
 				tp1.append("Used " + chosenAlgorithm + " to determine the intensity threshold - threshold value:	" + df6.format(threshold));
 				
 				progress.addToBar(0.1);
 				
+//				tempImp.show();
+//				new WaitForUserDialog("after thr").show();
+//				tempImp.hide();
+				
 				progress.updateBarText("Segment image with threshold " + dfDialog.format(threshold) + " ...");
-				segmentImage(tempImp, threshold, 0, tempImp, 0, false, false);
+				segmentImage(tempImp, threshold, 0, tempImp, 0, false, darkBackground);
 				
-				progress.addToBar(0.1);
+//				tempImp.show();
+//				new WaitForUserDialog("bin").show();
+//				tempImp.hide();
 				
-				progress.updateBarText("Set pixels outside non-zero-Pixel ROI to zero in mask...");
-				if(excludeZeroRegions) {
-					setRegionsOutsideRoiToZero(tempImp, 1, regionsAboveZero);
-				}
-
-				progress.addToBar(0.1);
+				progress.addToBar(0.1);				
+				
 			}else{
 				progress.updateBarText("Set custom threshold " + customThr + " ...");
 				threshold = customThr;
 				tp1.append("Used " + chosenAlgorithm + " as intensity threshold - threshold value:	" + df6.format(threshold));
 
-				progress.addToBar(0.15);
+				progress.addToBar(0.5);
 				
 				progress.updateBarText("Segment image with threshold " + dfDialog.format(threshold) + " ...");
-				segmentImage(tempImp, threshold, 0, tempImp, 0, false, false);
+				segmentImage(tempImp, threshold, 0, tempImp, 0, false, darkBackground);
 
-				progress.addToBar(0.15);
+				progress.addToBar(0.1);
 			}			
+			
+			if(excludeZeroRegions) {
+				progress.updateBarText("Set pixels outside non-zero-Pixel ROI to zero in mask...");
+				setRegionsOutsideRoiToZero(tempImp, 1, regionsAboveZero);
+			}
+			progress.addToBar(0.1);
 
+   			if(keepAwake) {
+				stayAwake();
+			}
+			
 		   	tempImp.deleteRoi();
 			
+		   	if(tempImp.getBitDepth()!=8) {
+				tempImp = getOtherBitImageFromBinary32bit(tempImp, false, 8);
+//			   	tempImp.show();
+//				new WaitForUserDialog("bitconv").show();
+//				tempImp.hide();	
+			}
+		   	
 			if(despeckle) {
 				progress.updateBarText("Despeckle mask");
 				IJ.run(tempImp, "Despeckle", "");
 			}
 
 			progress.addToBar(0.1);
-			
-			progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius) + " px)...");
-			mask = getFillHolesAndRemoveNoise(tempImp, linkGapsForRemoveRadius, removeRadius);
-			
-			progress.addToBar(0.1);
 
+   			if(keepAwake) {
+				stayAwake();
+			}
+			if(removeParticles) {
+				if(keepAwake) {
+					stayAwake();
+				}
+				
+				progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius) + " px)...");
+				mask = getFillHolesAndRemoveNoise(tempImp, linkGapsForRemoveRadius, removeRadius);
+				
+				progress.addToBar(0.1);
+
+//			   	tempImp.show();
+//				new WaitForUserDialog("calc").show();
+//				tempImp.hide();	
+				
+			   	progress.updateBarText("Invert image...");
+//					IJ.run(tempImp, "Invert", "");
+				tempImp.getProcessor().invert();
+
+	   			if(keepAwake) {
+					stayAwake();
+				}
+	   			
+//			   	tempImp.show();
+//				new WaitForUserDialog("calc").show();
+//				tempImp.hide();	
+				
+				progress.addToBar(0.1);
+				
+				ImageCalculator ic = new ImageCalculator();
+				tempImp = ic.run("AND create", tempImp, mask);
+
+				mask.changes = false;
+				mask.close();
+				progress.addToBar(0.1);
+			}else {
+				progress.addToBar(0.3);
+			}
+						
 //		   	tempImp.show();
-//			new WaitForUserDialog("calc").show();
+//			new WaitForUserDialog("Prefill").show();
 //			tempImp.hide();	
 			
-		   	progress.updateBarText("Invert image...");
-//				IJ.run(tempImp, "Invert", "");
-			tempImp.getProcessor().invert();
-
-//		   	tempImp.show();
-//			new WaitForUserDialog("calc").show();
-//			tempImp.hide();	
-			
-			progress.addToBar(0.1);
-			
-			ImageCalculator ic = new ImageCalculator();
-			tempImp = ic.run("AND create", tempImp, mask);
-
-			progress.addToBar(0.1);
-		   	
 			if(fillHoles) {
+	   			if(keepAwake) {
+					stayAwake();
+				}
+				progress.updateBarText("Fill holes...");
 				IJ.run(tempImp, "Fill Holes", "");
+			}
+
+			if(watershed) {
+	   			if(keepAwake) {
+					stayAwake();
+				}
+				progress.updateBarText("Watershed...");
+				IJ.run(tempImp, "Watershed", "");
 			}
 
 //		   	tempImp.show();
 //			new WaitForUserDialog("calc").show();
 //			tempImp.hide();	
 			
-			if(includeDuplicateChannel){
-		   		outImp = (CompositeImage)IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
-		   				2, imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
-		   		outImp.setCalibration(imp.getCalibration());
-		   		outImp.setDisplayMode(IJ.COMPOSITE);
-		   		for(int x = 0; x < imp.getWidth(); x++){
-		   			for(int y = 0; y < imp.getHeight(); y++){
-		   				for(int s = 0; s < imp.getNSlices(); s++){
-		   					for(int f = 0; f < imp.getNFrames(); f++){
-   								indexOld = tempImp.getStackIndex(1, s+1, f+1)-1;
-		   						indexNew = outImp.getStackIndex(1, s+1, f+1)-1;
-		   						outImp.getStack().setVoxel(x, y, indexNew, tempImp.getStack().getVoxel(x, y, indexOld));
-   								
-   								indexOld = imp.getStackIndex(1, s+1, f+1)-1;
-		   						indexNew = outImp.getStackIndex(2, s+1, f+1)-1;
-		   						outImp.getStack().setVoxel(x, y, indexNew, imp.getStack().getVoxel(x, y, indexOld));
-		   					}					
-		   				}
-		   			}
-		   		}
-		   		
-		   		tempImp.changes = false;
-				tempImp.close();
-		   		
-			   	newLuts = new LUT [outImp.getNChannels()];
-			   	
-			   	tp1.append("Channels in output image:");
-		   		
-		   		newLuts [0] = originalLuts [channelID-1];
-		   		newLuts [1] = originalLuts [channelID-1];
-		   		
-		   		tp1.append("Channel " + 1 + ":	" + "previous channel " + (channelID) + " (segmented)");
-				tp1.append("Channel " + 2 + ":	" + "previous channel " + (channelID) + " (unsegmented)");
-				for(int s = 0; s < outImp.getNSlices(); s++){
-   					for(int f = 0; f < outImp.getNFrames(); f++){
-   						indexNew = outImp.getStackIndex(1, s+1, f+1)-1;
-	   					outImp.getStack().setSliceLabel("segm " + sliceLabels [f][s], indexNew+1);
-	   					indexNew = outImp.getStackIndex(2, s+1, f+1)-1;
-	   					outImp.getStack().setSliceLabel("" + sliceLabels [f][s], indexNew+1);
-   					}
-				}
-		   		
-				outImp.setDisplayMode(IJ.COMPOSITE);
-				outImp.setLuts(newLuts);
-				IJ.saveAsTiff(outImp, filePrefix + ".tif");
-				outImp.changes = false;
-				outImp.close();
-				System.gc();
-		   	}else{
-				IJ.saveAsTiff(tempImp, filePrefix + ".tif");	
+			//TODO deleteOtherChannels
+
+   			if(keepAwake) {
+				stayAwake();
+			}
+   			
+			if(deleteOtherChannels) {
+				if(includeDuplicateChannel){
+					progress.updateBarText("Add duplicated channel");
+			   		outImp = (CompositeImage)IJ.createHyperStack(imp.getTitle() + " cq", imp.getWidth(), imp.getHeight(), 
+			   				2, imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
+			   		outImp.setCalibration(imp.getCalibration());
+			   		outImp.setDisplayMode(IJ.COMPOSITE);
+			   		for(int x = 0; x < imp.getWidth(); x++){
+			   			for(int y = 0; y < imp.getHeight(); y++){
+			   				for(int s = 0; s < imp.getNSlices(); s++){
+			   					for(int f = 0; f < imp.getNFrames(); f++){
+	   								indexOld = tempImp.getStackIndex(1, s+1, f+1)-1;
+			   						indexNew = outImp.getStackIndex(1, s+1, f+1)-1;
+			   						outImp.getStack().setVoxel(x, y, indexNew, tempImp.getStack().getVoxel(x, y, indexOld));
+	   								
+	   								indexOld = imp.getStackIndex(1, s+1, f+1)-1;
+			   						indexNew = outImp.getStackIndex(2, s+1, f+1)-1;
+			   						outImp.getStack().setVoxel(x, y, indexNew, imp.getStack().getVoxel(x, y, indexOld));
+			   					}					
+			   				}
+			   			}
+			   		}
+			   		
+			   		tempImp.changes = false;
+					tempImp.close();
+			   		
+				   	newLuts = new LUT [outImp.getNChannels()];
+				   	
+				   	tp1.append("Channels in output image:");
+			   		
+			   		newLuts [0] = originalLuts [channelIDs [0]-1];
+			   		newLuts [1] = originalLuts [channelIDs [0]-1];
+			   		
+			   		tp1.append("Channel " + 1 + ":	" + "previous channel " + (channelIDs [0]) + " (segmented)");
+					tp1.append("Channel " + 2 + ":	" + "previous channel " + (channelIDs [0]) + " (unsegmented)");
+					for(int s = 0; s < outImp.getNSlices(); s++){
+	   					for(int f = 0; f < outImp.getNFrames(); f++){
+	   						indexNew = outImp.getStackIndex(1, s+1, f+1)-1;
+		   					outImp.getStack().setSliceLabel("segm " + sliceLabels [f][s], indexNew+1);
+		   					indexNew = outImp.getStackIndex(2, s+1, f+1)-1;
+		   					outImp.getStack().setSliceLabel("" + sliceLabels [f][s], indexNew+1);
+	   					}
+					}
+			   		
+					outImp.setDisplayMode(IJ.COMPOSITE);
+					outImp.setLuts(newLuts);
+					IJ.saveAsTiff(outImp, filePrefix + ".tif");
+					outImp.changes = false;
+					outImp.close();
+			   	}else{
+					IJ.saveAsTiff(tempImp, filePrefix + ".tif");	
+					tempImp.changes = false;
+					tempImp.close();
+			   	}
+			}else {
+				if(includeDuplicateChannel){
+					int addC = 1;
+					double maxValue = Math.pow(2.0, imp.getBitDepth())-1.0;
+			   		
+					ImagePlus tempImp2 = IJ.createHyperStack(imp.getTitle() + " lq", imp.getWidth(), imp.getHeight(), 
+			   				imp.getNChannels()+addC,
+			   				imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
+			   		tempImp2.setCalibration(imp.getCalibration());
+			   		tempImp2.setDisplayMode(IJ.COMPOSITE);
+			   		
+			   		int cNew = 0;
+			   		for(int x = 0; x < imp.getWidth(); x++){
+			   			for(int y = 0; y < imp.getHeight(); y++){
+			   				for(int s = 0; s < imp.getNSlices(); s++){
+			   					for(int f = 0; f < imp.getNFrames(); f++){
+		   							cNew = 0;
+			   						for(int c = 0; c < imp.getNChannels(); c++){
+			   							for(int i = 0; i < channelIDs.length; i++){
+			   								if(c+1 == channelIDs [i] && includeDuplicateChannel){
+						   						indexOld = tempImp.getStackIndex(1, s+1, f+1)-1;
+						   						indexNew = tempImp2.getStackIndex(c+cNew+1, s+1, f+1)-1;
+						   						if(tempImp.getStack().getVoxel(x, y, indexOld) != 0.0) {
+						   							tempImp2.getStack().setVoxel(x, y, indexNew, maxValue);
+						   						}
+						   						cNew ++;
+				   							}
+			   							}
+			   							indexOld = imp.getStackIndex(c+1, s+1, f+1)-1;
+				   						indexNew = tempImp2.getStackIndex(c+cNew+1, s+1, f+1)-1;
+				   						tempImp2.getStack().setVoxel(x, y, indexNew, imp.getStack().getVoxel(x, y, indexOld));
+			   						}
+			   					}					
+			   				}
+			   			}
+			   		}
+			   		
+			   		originalLuts = new LUT [imp.getNChannels()];
+				   	for(int c = 0; c < imp.getNChannels(); c++){
+				   		imp.setC(c+1);
+				   		originalLuts[c] = imp.getChannelProcessor().getLut();
+				   	}		   		
+				   	newLuts = new LUT [tempImp2.getNChannels()];
+				   	
+				   	tp1.append("Channels in output image:");
+				   	cNew = 0;
+				   	String copyStr;
+				   	boolean search;
+			   		for(int c = 0; c < imp.getNChannels(); c++){
+			   			if(keepAwake) {
+							stayAwake();
+						}
+			   			newLuts [c+cNew] = originalLuts [c];
+			   			search = false;
+						for(int i = 0; i < channelIDs.length; i++){
+							if(c+1 == channelIDs [i]){
+	   							search = true;
+	   							break;
+							}
+						}
+						if(search){
+							tp1.append("Channel " + (c+1+cNew) + ":	" + "previous channel " + (c+1) + " (segmented)");
+							for(int s = 0; s < imp.getNSlices(); s++){
+			   					for(int f = 0; f < imp.getNFrames(); f++){
+			   						indexOld = imp.getStackIndex(c+1, s+1, f+1)-1;
+				   					indexNew = tempImp2.getStackIndex(c+cNew+1, s+1, f+1)-1;
+				   					try{
+				   						if(imp.getStack().getSliceLabel(indexOld+1).equals(null)){
+					   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+					   							+  " T" + (f+1) + "/" + imp.getNFrames();
+					   					}else if(imp.getStack().getSliceLabel(indexOld+1).isEmpty()){
+					   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+				   							+  " T" + (f+1) + "/" + imp.getNFrames();
+					   					}else{
+					   						copyStr = imp.getStack().getSliceLabel(indexOld+1);
+					   					}
+				   					}catch(Exception e){
+				   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+			   							+  " T" + (f+1) + "/" + imp.getNFrames();
+				   					}				   					
+				   					tempImp2.getStack().setSliceLabel("segm " + copyStr, indexNew+1);
+			   					}
+							}
+							
+							for(int i = 0; i < channelIDs.length; i++){
+								if(c+1 == channelIDs [i]){
+									cNew ++;
+	   								newLuts [c+cNew] = originalLuts [c];
+	   								tp1.append("Channel " + (c+1+cNew) + ":	" + "previous channel " + (c+1) + "");
+	   								
+	   								for(int s = 0; s < imp.getNSlices(); s++){
+	   				   					for(int f = 0; f < imp.getNFrames(); f++){
+		   				   					indexOld = imp.getStackIndex(c+1, s+1, f+1)-1;
+						   					indexNew = tempImp2.getStackIndex(c+cNew+1, s+1, f+1)-1;
+						   					try{
+						   						if(imp.getStack().getSliceLabel(indexOld+1).equals(null)){
+							   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+							   							+  " T" + (f+1) + "/" + imp.getNFrames();
+							   					}else if(imp.getStack().getSliceLabel(indexOld+1).isEmpty()){
+							   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+						   							+  " T" + (f+1) + "/" + imp.getNFrames();
+							   					}else{
+							   						copyStr = imp.getStack().getSliceLabel(indexOld+1);
+							   					}
+						   					}catch(Exception e){
+						   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+					   							+  " T" + (f+1) + "/" + imp.getNFrames();
+						   					}					   					
+						   					tempImp2.getStack().setSliceLabel(copyStr, indexNew+1);
+	   				   					}
+	   								}   								
+								}
+							}
+						}else{
+							tp1.append("Channel " + (c+1+cNew) + ":	" + "previous channel " + (c+1) + "");
+							for(int s = 0; s < imp.getNSlices(); s++){
+			   					for(int f = 0; f < imp.getNFrames(); f++){
+			   						indexOld = imp.getStackIndex(c+1, s+1, f+1)-1;
+				   					indexNew = tempImp2.getStackIndex(c+cNew+1, s+1, f+1)-1;
+				   					try{
+				   						if(imp.getStack().getSliceLabel(indexOld+1).equals(null)){
+					   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+					   							+  " T" + (f+1) + "/" + imp.getNFrames();
+					   					}else if(imp.getStack().getSliceLabel(indexOld+1).isEmpty()){
+					   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+				   							+  " T" + (f+1) + "/" + imp.getNFrames();
+					   					}else{
+					   						copyStr = imp.getStack().getSliceLabel(indexOld+1);
+					   					}
+				   					}catch(Exception e){
+				   						copyStr = "Channel " + (c+1) + " S" + (s+1) + "/" + imp.getNSlices() 
+			   							+  " T" + (f+1) + "/" + imp.getNFrames();
+				   					}			   					
+				   					tempImp2.getStack().setSliceLabel(copyStr, indexNew+1);
+			   					}
+							}
+						}
+					}
+			   		
+			   		if(keepAwake) {
+						stayAwake();
+					}
+			   			   				   		
+		   			CompositeImage ci = (CompositeImage) tempImp2;
+		   			ci.setDisplayMode(IJ.COMPOSITE);
+		   			ci.setLuts(newLuts);
+					IJ.saveAsTiff(ci, filePrefix + ".tif");
+			   		tempImp2.changes = false;
+					tempImp2.close();
+					ci.changes = false;
+					ci.close();					
+			   	}else{
+			   		for(int x = 0; x < imp.getWidth(); x++){
+			   			for(int y = 0; y < imp.getHeight(); y++){
+			   				for(int s = 0; s < imp.getNSlices(); s++){
+			   					for(int f = 0; f < imp.getNFrames(); f++){
+		   							for(int i = 0; i < channelIDs.length; i++){
+//			   								if(c+1 == channelIDs [i] && includeDuplicateChannel){
+//						   						indexOld = tempImp.getStackIndex(1, s+1, f+1)-1;
+//						   						indexNew = tempImp2.getStackIndex(c+cNew+1, s+1, f+1)-1;
+//						   						if(tempImp.getStack().getVoxel(x, y, indexOld) != 0.0) {
+//						   							tempImp2.getStack().setVoxel(x, y, indexNew, maxValue);
+//						   						}
+//						   						cNew ++;
+//				   							}
+//			   							}			   							
+			   							indexOld = tempImp.getStackIndex(1, s+1, f+1)-1;
+			   							indexNew = imp.getStackIndex(channelIDs[i]+1, s+1, f+1)-1;
+				   						imp.getStack().setVoxel(x, y, indexNew, tempImp.getStack().getVoxel(x, y, indexOld));
+			   						}
+			   					}					
+			   				}
+			   			}
+			   		}
+			   		IJ.saveAsTiff(imp, filePrefix + ".tif");
+			   	}				
 				tempImp.changes = false;
 				tempImp.close();
-		   	}
-
-			mask.changes = false;
-			mask.close();
+			}
+			
 			
 		   	addFooter(tp1, startDate);				
 			tp1.saveAs(filePrefix + ".txt");			
 
 			progress.updateBarText("Finished ...");
-			System.gc();
 			
 			/******************************************************************
 			*** 							Finish							***	
@@ -916,11 +1228,22 @@ private boolean importSettings() {
 	//read individual channel settings
 	String tempString;
 	
+	channelIDs [0] = -1;
+	preBlur = false;
+	preBlurSigma = -1.0;
+	subtractBluredImage = false;
+	subtractBlurSigma = -1.0;
 	excludeZeroRegions = false;
 	includeDuplicateChannel = false;
-	despeckle = false;
+	deleteOtherChannels = false;
 	linkForROI = false;
+	removeParticles = false;
 	removeRadius = -1.0;
+	despeckle = false;
+	fillHoles = false;
+	watershed = false;
+	darkBackground = false;
+	boolean readThrough = false;
 	
 	IJ.log("READING PREFERENCES:");
 	try {
@@ -940,13 +1263,34 @@ private boolean importSettings() {
 				if(line.contains("Channel Nr:")){
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
-					channelID = Integer.parseInt(tempString);	
-					IJ.log("Channel nr = " + channelID);
+					channelIDs [0] = Integer.parseInt(tempString);	
+					IJ.log("Channel nr = " + channelIDs [0]);
 				}
 				if(line.contains("Channel duplicated to include a copy of the channel that is not processed")){
 					includeDuplicateChannel = true;
 					IJ.log("Duplicate Channel");
 				}
+				if(line.contains("Deleted all channels except the channel(s) to be segmented")){
+					deleteOtherChannels = true;
+					IJ.log("Delete other channels");
+				}
+				
+				if(line.contains("Blur image before analysis - Gaussian sigma (px):")){
+					preBlur = true;
+					tempString = line.substring(line.lastIndexOf("	")+1);
+					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+					preBlurSigma = Double.parseDouble(tempString);
+					IJ.log("Blur image before analysis - Gaussian sigma (px) = " + preBlurSigma);						
+				}
+				
+				if(line.contains("Subtract blurred copy of the image (for normalization) - Gaussian sigma (px):")){
+					subtractBluredImage = true;
+					tempString = line.substring(line.lastIndexOf("	")+1);
+					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+					subtractBlurSigma = Double.parseDouble(tempString);
+					IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (px) = " + subtractBlurSigma);						
+				}
+				
 				if(line.contains("Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (px):")){
 					excludeZeroRegions = true;
 					tempString = line.substring(line.lastIndexOf("	")+1);
@@ -978,31 +1322,82 @@ private boolean importSettings() {
 					}
 				}
 				
-					
-					if(line.contains("Close gaps for detecting tissue regions (px):")){
-						tempString = line.substring(line.lastIndexOf("	")+1);
-						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
-						linkForROI = true;
-						linkGapsForRemoveRadius = Double.parseDouble(tempString);
-						
-						IJ.log("Close gaps for detecting tissue regions rad = " + linkGapsForRemoveRadius);						
-					}
+				if(line.contains("Background definition: detect bright objects on dark background")) {
+					IJ.log("Detect bright objects on dark background");
+					darkBackground = true;
+				}else if(line.contains("Background definition: detect dark objects on bright background")) {
+					IJ.log("Detect dark objects on bright background");
+					darkBackground = false;
+				}
+				
 				
 				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions (px)") 
 						|| line.contains("Auto detect the region of interest - radius of exluded regions (px)")){
+					removeParticles = true;
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					removeRadius = Double.parseDouble(tempString);
 					
 					IJ.log("Auto detect - exclude regions (px) = " + removeRadius);						
 				}
+				
+				if(line.contains("No auto-detection of region of interest applied.")){
+					removeParticles = false;
+					removeRadius = 0.0;
+					
+					IJ.log("Do not auto-detect regions and do not exclude regions");	
+				}
+				
+				if(line.contains("Close gaps for detecting tissue regions (px):")){
+					tempString = line.substring(line.lastIndexOf("	")+1);
+					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+					linkForROI = true;
+					linkGapsForRemoveRadius = Double.parseDouble(tempString);
+					
+					IJ.log("Close gaps for detecting tissue regions rad = " + linkGapsForRemoveRadius);						
+				}
+				
 				if(line.contains("Despeckle mask")){
 					despeckle = true;
 					IJ.log("Despeckle mask");
 				}
-				if(line.contains("Fill holes in mask")) {
+				if(line.contains("Fill holes in mask") || line.contains("Fill holes in segmented image")) {
 					fillHoles = true;
 					IJ.log("Fill holes in mask");
+				}
+				
+				if(line.contains("Apply watershed algorithm")) {
+					watershed = true;
+					IJ.log("Apply watershed algorithm");
+				}
+				
+				if(line.contains("'AdipoQ Preparator'")) {
+					readThrough = true;
+					line = br.readLine();
+					line = br.readLine();
+					if(line.contains("0.0.7")){
+						deleteOtherChannels = true;
+						IJ.log("Delete other channels");
+					}
+					darkBackground = false;
+					IJ.log("Light background");
+				}
+				
+				if(line.contains("'LipiroidQ'")) {
+					readThrough = true;
+					line = br.readLine();
+					line = br.readLine();
+					if(line.contains("0.0.1")){
+						includeDuplicateChannel = true;
+						IJ.log("Duplicate Channel");
+						deleteOtherChannels = false;
+						IJ.log("Do not delete other channels");
+						removeParticles = false;
+						removeRadius = 0.0;
+						IJ.log("Do not auto-detect regions and do not exclude regions");
+						darkBackground = true;
+						IJ.log("Dark background");
+					}
 				}
 			}			
 		}					
@@ -1013,8 +1408,8 @@ private boolean importSettings() {
 		e.printStackTrace();
 		return false;
 	}
-	if(removeRadius == -1) {
-		IJ.error("Problem with loading preferences - removeRadius missing");
+	if(removeRadius == -1.0 || channelIDs [0] == -1 || !readThrough) {
+		IJ.error("Problem with loading preferences - parameters missing or inappropriate text file.");
 		return false;
 	}
 	return true;
@@ -1022,55 +1417,170 @@ private boolean importSettings() {
 
 /**
  * Show dialogs to enter settings
+ * @param defaultType: 0 = histology, 1 = DAPI nuclei, 2 = cell culture
  * */
-private boolean enterSettings() {
-	GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - set parameters");	
-	//show Dialog-----------------------------------------------------------------
-	//.setInsets(top, left, bottom)
-	gd.setInsets(0,0,0);		gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2021 JN Hansen", SuperHeadingFont);
-	gd.setInsets(0,10,0);		gd.addNumericField("Channel Nr (>= 1 & <= nr of channels) for quantification", channelID, 0);
-	gd.setInsets(0,10,0);		gd.addCheckbox("Include raw copy of the channel in output image", includeDuplicateChannel);
-	
-	gd.setInsets(0,10,0);		gd.addCheckbox("Exclude zero intensity pixels in threshold calculation - radius of tolerated gaps (px)", excludeZeroRegions);
-	gd.setInsets(-23,100,0);	gd.addNumericField("", closeGapsRadius, 3);
-	
-	gd.setInsets(0,10,0);		gd.addChoice("Segmentation method", algorithm, chosenAlgorithm);
-	gd.setInsets(0,0,0);		gd.addNumericField("If 'CUSTOM threshold' was selected, specify threshold here", customThr, 2);
-	
-	gd.setInsets(0,10,0);		gd.addCheckbox("Despeckle segmented image", despeckle);
-
-	gd.setInsets(0,10,0);	gd.addCheckbox("Close gaps for detecting tissue region | distance", linkForROI);
-	gd.setInsets(-23,100,0);	gd.addNumericField("", linkGapsForRemoveRadius, 2);
-	
-	gd.setInsets(0,10,0);		gd.addNumericField("Radius of particles to be removed as noise while detecting adipose tissue regions", removeRadius, 2);
-	
-	gd.setInsets(0,10,0);		gd.addCheckbox("Fill holes in segmented image", fillHoles);
-	
-	
-	
-	gd.showDialog();
-	//show Dialog-----------------------------------------------------------------
-
-	//read and process variables--------------------------------------------------	
-	{
-		channelID = (int) gd.getNextNumber();
-		includeDuplicateChannel = gd.getNextBoolean();
-		excludeZeroRegions = gd.getNextBoolean();
-		closeGapsRadius = (double) gd.getNextNumber();
-		chosenAlgorithm = gd.getNextChoice();
-		customThr = gd.getNextNumber();
-		despeckle = gd.getNextBoolean();
-		linkForROI = gd.getNextBoolean();
-		linkGapsForRemoveRadius = gd.getNextNumber();
-		removeRadius = gd.getNextNumber();
-		fillHoles = gd.getNextBoolean();
+private boolean enterSettings(int defaultType) {
+	/*
+		Depending on set variant show default settings for one or the other
+	*/
+	if(defaultType == 0) {
+		/**Histology settings*/
+		channelIDs [0] = 1;
+		includeDuplicateChannel = true;
+		deleteOtherChannels = true;
+		preBlur = false;
+		preBlurSigma = 0.0;
+		subtractBluredImage = false;
+		subtractBlurSigma = 0.0;
+		excludeZeroRegions = true;
+		closeGapsRadius = 5.0;
+		removeParticles = true;
+		removeRadius = 20.0;
+		despeckle = true;
+		linkForROI = false;
+		linkGapsForRemoveRadius = 5.0;
+		chosenAlgorithm = "Triangle";
+		customThr = 0.0;
+		darkBackground = false;
+		fillHoles = true;
+		watershed = false;		
+	}else if (defaultType == 1){
+		/**DAPI settings*/
+		channelIDs [0] = 1;
+		includeDuplicateChannel = true;
+		deleteOtherChannels = false;
+		preBlur = true;
+		preBlurSigma = 2.0;
+		subtractBluredImage = true;
+		subtractBlurSigma = 3.0;
+		excludeZeroRegions = false;
+		closeGapsRadius = 5.0;
+		removeParticles = false;
+		removeRadius = 20.0;
+		despeckle = false;
+		linkForROI = false;
+		linkGapsForRemoveRadius = 5.0;
+		chosenAlgorithm = "Otsu";
+		customThr = 0.0;
+		darkBackground = true;
+		fillHoles = true;
+		watershed = true;		
+	}else if (defaultType == 1){
+		/**Cell culture settings*/ //TODO
+		/**DAPI settings*/
+		channelIDs [0] = 1;
+		includeDuplicateChannel = true;
+		deleteOtherChannels = false;
+		preBlur = true;
+		preBlurSigma = 2.0;
+		subtractBluredImage = true;
+		subtractBlurSigma = 3.0;
+		excludeZeroRegions = false;
+		closeGapsRadius = 5.0;
+		removeParticles = false;
+		removeRadius = 20.0;
+		despeckle = false;
+		linkForROI = false;
+		linkGapsForRemoveRadius = 5.0;
+		chosenAlgorithm = "Otsu";
+		customThr = 0.0;
+		darkBackground = true;
+		fillHoles = true;
+		watershed = false;
+	}else {
+		IJ.error("Incorrect default Type - plugin cancelled!");
 	}
-	System.gc();
-	//read and process variables--------------------------------------------------
 	
-	if (gd.wasCanceled()) return false;
+	if(darkBackground) {
+		selectedBgVariant = bgMethod[0];
+	}else {
+		selectedBgVariant = bgMethod[1];
+	}
+	
+	while(true) {
+		/*
+		 * Show dialog
+		 * */
+		GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - set parameters");	
+		//show Dialog-----------------------------------------------------------------
+		//.setInsets(top, left, bottom)
+		gd.setInsets(0,0,0);		gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2021 JN Hansen", SuperHeadingFont);
+		gd.setInsets(0,10,0);		gd.addNumericField("Channel Nr (>= 1 & <= nr of channels) for quantification", channelIDs [0], 0);
+		gd.setInsets(0,10,0);		gd.addCheckbox("Include raw copy of the channel in output image", includeDuplicateChannel);
+		gd.setInsets(0,10,0);		gd.addCheckbox("Delete all non-segmented channels", deleteOtherChannels);
+
+		gd.setInsets(0,10,0);		gd.addCheckbox("Blur image before analysis - Gaussian sigma (px)", preBlur);
+		gd.setInsets(-23,100,0);		gd.addNumericField("", preBlurSigma, 3);
+		
+		gd.setInsets(0,10,0);		gd.addCheckbox("Subtract blurred copy of image (to normalize) - Gauss sigma (px)", subtractBluredImage);
+		gd.setInsets(-23,100,0);		gd.addNumericField("", subtractBlurSigma, 3);
+		
+		
+		gd.setInsets(0,10,0);		gd.addChoice("Segmentation method", algorithm, chosenAlgorithm);
+		gd.setInsets(0,0,0);		gd.addNumericField("If 'CUSTOM threshold' was selected, specify threshold here", customThr, 2);
+		gd.setInsets(0,10,0);		gd.addChoice("Background definition", bgMethod, selectedBgVariant);
+		gd.setInsets(0,10,0);		gd.addCheckbox("Exclude zero-pixels in threshold calc. - tolerated gap radius (px)", excludeZeroRegions);
+		gd.setInsets(-23,100,0);	gd.addNumericField("", closeGapsRadius, 3);
+		
+		gd.setInsets(0,10,0);		gd.addCheckbox("Despeckle segmented image", despeckle);
+
+		gd.setInsets(0,10,0);	gd.addCheckbox("Detect tissue regions and remove smaller regions | minimum radius", removeParticles);
+		gd.setInsets(-23,100,0);		gd.addNumericField("", removeRadius, 2);
+		
+		gd.setInsets(0,10,0);	gd.addCheckbox("During detecting tissue regions, close gaps | distance", linkForROI);
+		gd.setInsets(-23,100,0);	gd.addNumericField("", linkGapsForRemoveRadius, 2);
+		
+		gd.setInsets(0,10,0);		gd.addCheckbox("Fill holes in segmented image", fillHoles);
+		
+		gd.setInsets(0,10,0);		gd.addCheckbox("Apply Watershed algorithm", watershed);
+		
+		/*
+		 * TODO Add option to segment an additional channel
+		 * */	
+		
+		gd.showDialog();
+		//show Dialog-----------------------------------------------------------------
+
+		//read and process variables--------------------------------------------------	
+		{
+			channelIDs [0] = (int) gd.getNextNumber();
+			includeDuplicateChannel = gd.getNextBoolean();
+			deleteOtherChannels = gd.getNextBoolean();
+			preBlur = gd.getNextBoolean();
+			preBlurSigma = (double) gd.getNextNumber();
+			subtractBluredImage = gd.getNextBoolean();
+			subtractBlurSigma = (double) gd.getNextNumber();			
 			
-	System.gc();
+			chosenAlgorithm = gd.getNextChoice();
+			customThr = gd.getNextNumber();
+			selectedBgVariant = gd.getNextChoice();
+			if(selectedBgVariant == bgMethod[0]) {
+				darkBackground = true;
+			}else{
+				darkBackground = false;
+			}
+			
+			excludeZeroRegions = gd.getNextBoolean();
+			closeGapsRadius = (double) gd.getNextNumber();
+			
+			despeckle = gd.getNextBoolean();
+			removeParticles = gd.getNextBoolean();
+			removeRadius = gd.getNextNumber();
+			linkForROI = gd.getNextBoolean();
+			linkGapsForRemoveRadius = gd.getNextNumber();
+			fillHoles = gd.getNextBoolean();			
+			watershed = gd.getNextBoolean();
+		}
+		//read and process variables--------------------------------------------------
+		
+		if (gd.wasCanceled()) return false;	
+		
+		if (linkForROI && !removeParticles) {
+			new WaitForUserDialog("'Close gaps ...' option is only available when 'Detect tissue regions ...' option selected. Change of settings required.").show();
+		}else {
+			break;
+		}
+	}	
 	return true;
 }
 
@@ -1166,16 +1676,24 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 	tp.append("Preparation settings:	");
 	
 	{
-		tp.append("	Channel Nr:	" + df0.format(channelID));
+		tp.append("	Channel Nr:	" + df0.format(channelIDs [0]));
 		
 		if(includeDuplicateChannel){
 			tp.append("	Channel duplicated to include a copy of the channel that is not processed.");
 		}else{tp.append("");}
 		
-		if(excludeZeroRegions){
-			tp.append("	Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (px):	" + df6.format(closeGapsRadius));
-		}else{tp.append("");}		
+		if(deleteOtherChannels){
+			tp.append("	Deleted all channels except the channel(s) to be segmented.");
+		}else{tp.append("");}
 		
+		if(preBlur){
+			tp.append("	Blur image before analysis - Gaussian sigma (px):	" + df6.format(preBlurSigma));
+		}else{tp.append("");}
+		
+		if(subtractBluredImage){
+			tp.append("	Subtract blurred copy of the image (for normalization) - Gaussian sigma (px):	" + df6.format(subtractBlurSigma));
+		}else{tp.append("");}
+				
 		if (chosenAlgorithm == "CUSTOM threshold"){
 			tp.append("	Segmentation method:	" + "CUSTOM threshold");
 			tp.append("		Custom threshold value:	" + df6.format(customThr));
@@ -1184,25 +1702,69 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			tp.append("");				
 		}	
 		
+		if(darkBackground){
+			tp.append("	Background definition: detect bright objects on dark background.");
+		}else{
+			tp.append("	Background definition: detect dark objects on bright background.");
+		}
+
+		if(excludeZeroRegions){
+			tp.append("	Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (px):	" + df6.format(closeGapsRadius));
+		}else{tp.append("");}		
+		
+		
 		if(despeckle){
 			tp.append("	Despeckle mask");
 		}else{tp.append("");}
 		
-		if(linkForROI){
-			tp.append("	Close gaps for detecting tissue regions (px):	" + df6.format(linkGapsForRemoveRadius));
-		}else{tp.append("");}		
-		
-		
-		tp.append("	Auto detect the region of interest - radius of exluded regions (px):	" + df6.format(removeRadius));
+		if(removeParticles) {
+			tp.append("	Auto detect the region of interest - radius of exluded regions (px):	" + df6.format(removeRadius));
+			if(linkForROI){
+				tp.append("	Close gaps for detecting tissue regions (px):	" + df6.format(linkGapsForRemoveRadius));
+			}else{tp.append("");}		
+		}else{
+			tp.append("	No auto-detection of region of interest applied.");
+			tp.append("");
+		}	
 				
 		if(fillHoles){
 			tp.append("	Fill holes in mask");
-		}else{tp.append("");}		
+		}else{tp.append("");}
 		
-		
+		if(watershed){
+			tp.append("	Apply watershed algorithm");
+		}else{tp.append("");}	
+
 				
 	}
 	tp.append("");
+}
+
+private ImagePlus subtractABluredImage(ImagePlus imp, double radius) {
+	ImagePlus outImp = IJ.createHyperStack("divided image", imp.getWidth(), imp.getHeight(), 1, imp.getNSlices(), imp.getNFrames(), 32);
+	outImp.setCalibration(imp.getCalibration());
+	outImp.setOverlay(imp.getOverlay());
+	ImagePlus tempImp;
+	for(int s = 0; s < imp.getNSlices(); s++) {
+		for(int t = 0; t < imp.getNFrames(); t++) {
+			tempImp = IJ.createHyperStack("temp", imp.getWidth(), imp.getHeight(), 1, 1, 1, imp.getBitDepth());
+			for(int x = 0; x < imp.getWidth(); x++) {
+				for(int y = 0; y < imp.getHeight(); y++) {
+					tempImp.getStack().setVoxel(x, y, 0, imp.getStack().getVoxel(x, y, imp.getStackIndex(1 , s+1, t+1)-1));
+				}
+			}
+			
+			tempImp.getProcessor().blurGaussian(radius);
+			for(int x = 0; x < imp.getWidth(); x++) {
+				for(int y = 0; y < imp.getHeight(); y++) {
+					outImp.getStack().setVoxel(x, y, outImp.getStackIndex(1, s+1, t+1)-1, 
+							imp.getStack().getVoxel(x, y, imp.getStackIndex(1 , s+1, t+1)-1) 
+							- tempImp.getStack().getVoxel(x, y, 0));
+				}
+			}
+		}
+	}
+	return outImp;	
 }
 
 /**
@@ -1230,5 +1792,58 @@ private String getSeriesName(ImporterOptions options, int series) throws FormatE
 	ImportProcess process = new ImportProcess(options);
 	if (!process.execute()) return "NaN";
 	return process.getSeriesLabel(series);
+}
+
+ImagePlus getOtherBitImageFromBinary32bit(ImagePlus imp, boolean copyOverlay, int bitDepth) {
+	ImagePlus impNew = IJ.createHyperStack("channel image", imp.getWidth(), imp.getHeight(), 1,
+			imp.getNSlices(), imp.getNFrames(), bitDepth);
+	
+	double min = Double.POSITIVE_INFINITY;
+	double maxNew = Math.pow(2.0, (double) bitDepth)-1;
+	int index, indexNew;
+	
+
+	for(int x = 0; x < imp.getWidth(); x++){
+		for(int y = 0; y < imp.getHeight(); y++){
+			for(int s = 0; s < imp.getNSlices(); s++){
+				for(int f = 0; f < imp.getNFrames(); f++){
+					index = imp.getStackIndex(1, s+1, f+1)-1;
+					if(imp.getStack().getVoxel(x, y, index) < min) {
+						min = imp.getStack().getVoxel(x, y, index);
+					}
+				}					
+			}
+		}
+	}
+	
+	{
+		for(int x = 0; x < imp.getWidth(); x++){
+			for(int y = 0; y < imp.getHeight(); y++){
+				for(int s = 0; s < imp.getNSlices(); s++){
+					for(int f = 0; f < imp.getNFrames(); f++){
+						index = imp.getStackIndex(1, s+1, f+1)-1;
+						indexNew = impNew.getStackIndex(1, s+1, f+1)-1;
+						if(imp.getStack().getVoxel(x, y, index) == min) {
+							impNew.getStack().setVoxel(x, y, indexNew, 0.0);
+						}else {
+							impNew.getStack().setVoxel(x, y, indexNew, maxNew);
+						}
+					}					
+				}
+			}
+		}
+	}
+	impNew.setDisplayRange(0,maxNew);
+	if(copyOverlay)	impNew.setOverlay(imp.getOverlay().duplicate());
+		
+	impNew.setCalibration(imp.getCalibration());
+	return impNew;	
+}
+
+private void stayAwake() {
+	try {
+		robo.mouseMove(MouseInfo.getPointerInfo().getLocation().x, MouseInfo.getPointerInfo().getLocation().y);		
+	}catch(Exception e) {		
+	}
 }
 }//end main class
