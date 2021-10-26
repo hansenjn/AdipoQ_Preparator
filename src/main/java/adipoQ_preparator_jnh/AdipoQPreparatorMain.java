@@ -708,7 +708,6 @@ public void run(String arg) {
 				if(excludeZeroRegions [segmC]) {
 					progress.updateBarText("get non-zero-pixel ROI (close-gaps radius = " + dfDialog.format(closeGapsRadius [segmC]) + ")...");
 					regionsAboveZero = getRegionsAboveZeroAsROI(tempImp [segmC], 1, closeGapsRadius [segmC]);	
-//					tp1.append("Close gaps radius for non-zero-pixel ROI	" + df6.format(closeGapsRadius));	
 					tempImp [segmC].setRoi(regionsAboveZero);
 					//save ROI
 					RoiEncoder re;
