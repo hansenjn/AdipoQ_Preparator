@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: October 19, 2021)
+* Date: October 13, 2020 (This Version: October 26, 2021)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
