@@ -75,7 +75,7 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	String selectedTaskVariant = taskVariant[1];
 	int tasks = 1;
 
-	final static String[] settingsMethod = {"manually enter preferences (show default settings for histology)", "manually enter preferences (show default settings for cultured cells)", "load preferences from existing AdipoQ Preparator metadata file"};
+	final static String[] settingsMethod = {"manually enter preferences (default settings: histology)", "manually enter preferences (default settings: cultured cells)", "load preferences from existing AdipoQ Preparator metadata file"};
 	String selectedSettingsVariant = settingsMethod [0];
 	
 	String loadSeries = "ALL";
