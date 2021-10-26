@@ -858,7 +858,8 @@ public void run(String arg) {
 		   	/*
 		   	 * Generate output image
 		   	 * */
-   			
+
+		   	tp1.append("");
 			if(deleteOtherChannels) {
 				if(includeDuplicateChannel){
 					progress.updateBarText("Add duplicated channel");
