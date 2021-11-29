@@ -5,6 +5,6 @@ An ImageJ plugin to segment objects (i.e., adipocytes, lipid droplets, nuclei) f
 Download the latest version of the AdipoQ_Preparator plugin file (.jar file) from the [release page](https://github.com/hansenjn/AdipoQ_Preparator/releases/).
 
 ## Copyright & License notes
-Copyright (C) 2020-2021: Jan N. Hansen (contact: jan.hansen (at) uni-bonn.de).
+Copyright (C) 2019-2021: Jan N. Hansen (contact: jan.hansen (at) uni-bonn.de).
 
 The plugin is published under the GNU General Public License v3.0. A copy of the license is contained in this repository.
