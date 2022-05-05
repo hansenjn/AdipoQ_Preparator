@@ -11,10 +11,10 @@
  
  	<artifactId>AdipoQ_Preparator_JNH</artifactId>
  	<groupId>JNH</groupId>
-    <version>0.1.1-SNAPSHOT</version>
+    <version>0.1.2-SNAPSHOT</version>
  
     <name>AdipoQ_Preparator</name>
-    <description>ImageJ plugins to quantify HE-staining images of adipose tissue - Part I.</description>
+    <description>ImageJ plugins to quantify images of cultured cells and adipose tissue - Part I.</description>
  	<url>https://github.com/hansenjn/</url>
 	<inceptionYear>2020</inceptionYear>
 	<organization>

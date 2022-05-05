@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.1.1
+* AdipoQ Preparator Version 0.1.2
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: October 26, 2021)
+* Date: October 13, 2020 (This Version: May 04, 2022)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -46,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.1.1";
+	static final String PLUGINVERSION = "0.1.2";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -101,7 +101,7 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	String chosenAlgorithm [] = new String [] {"Triangle","Triangle","Triangle"};
 	double customThr [] = new double [] {0.0,0.0,0.0};
 	boolean darkBackground [] = new boolean []{false,false,false};
-	final static String [] bgMethod = new String []{"detect bright structures (dark background; e.g. immunofluorescence image)", "detect dark structures (bright background; e.g. histology)"};
+	final static String [] bgMethod = new String []{"detect bright structures (dark background; e.g., immunofluorescence image)", "detect dark structures (bright background; e.g., histology)"};
 	String selectedBgVariant [] = new String [] {bgMethod [0],bgMethod [0],bgMethod [0]};
 	
 	boolean despeckle [] = new boolean []{true,true,true};
@@ -131,7 +131,7 @@ public void run(String arg) {
 	GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + "");	
 	//show Dialog-----------------------------------------------------------------
 	//.setInsets(top, left, bottom)
-	gd.setInsets(0,0,0);	gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2021 JN Hansen", SuperHeadingFont);
+	gd.setInsets(0,0,0);	gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2022 JN Hansen", SuperHeadingFont);
 	gd.setInsets(5,0,0);	gd.addChoice("process ", taskVariant, selectedTaskVariant);
 	gd.setInsets(0,0,0);	gd.addMessage("The plugin processes .tif images or calls a BioFormats plugin to open different formats.", InstructionsFont);
 	gd.setInsets(0,0,0);	gd.addMessage("The BioFormats plugin is preinstalled in FIJI / can be manually installed to ImageJ.", InstructionsFont);
@@ -972,7 +972,7 @@ public void run(String arg) {
 			   								if(c+1 == channelIDs [segmC]){
 						   						indexOld = tempImp [segmC].getStackIndex(1, s+1, f+1)-1;
 						   						indexNew = outImp.getStackIndex(c+cNew+1, s+1, f+1)-1;
-						   						if(tempImp [segmC].getStack().getVoxel(x, y, indexOld) != 0.0) {
+						   						if(tempImp [segmC].getStack().getVoxel(x, y, indexOld) != 0.0) {			//TODO why set to max?
 						   							outImp.getStack().setVoxel(x, y, indexNew, maxValue);
 						   						}
 						   						cNew ++;
@@ -1363,28 +1363,28 @@ private boolean importSettings() {
 					IJ.log("Delete other channels");
 				}
 				
-				if(line.contains("Blur image before analysis - Gaussian sigma (px):")){
+				if(line.contains("Blur image before analysis - Gaussian sigma")){
 					preBlur [segmC] = true;
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					preBlurSigma [segmC] = Double.parseDouble(tempString);
-					IJ.log("Blur image before analysis - Gaussian sigma (px) = " + preBlurSigma [segmC]);						
+					IJ.log("Blur image before analysis - Gaussian sigma (calibrated unit) = " + preBlurSigma [segmC]);						
 				}
 				
-				if(line.contains("Subtract blurred copy of the image (for normalization) - Gaussian sigma (px):")){
+				if(line.contains("Subtract blurred copy of the image (for normalization) - Gaussian sigma")){
 					subtractBluredImage [segmC] = true;
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					subtractBlurSigma [segmC] = Double.parseDouble(tempString);
-					IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (px) = " + subtractBlurSigma [segmC]);						
+					IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (calibrated unit) = " + subtractBlurSigma [segmC]);						
 				}
 				
-				if(line.contains("Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (px):")){
+				if(line.contains("Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps")){
 					excludeZeroRegions [segmC] = true;
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					closeGapsRadius [segmC] = Double.parseDouble(tempString);
-					IJ.log("Exclude zero intensity - close gaps rad = " + closeGapsRadius [segmC]);						
+					IJ.log("Exclude zero intensity - close gaps rad (calibrated unit) = " + closeGapsRadius [segmC]);						
 				}
 				
 				if(line.contains("Segmentation method:")){
@@ -1419,14 +1419,14 @@ private boolean importSettings() {
 				}
 				
 				
-				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions (px)") 
-						|| line.contains("Auto detect the region of interest - radius of exluded regions (px)")){
+				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions") 
+						|| line.contains("Auto detect the region of interest - radius of exluded regions")){
 					removeParticles [segmC] = true;
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					removeRadius [segmC] = Double.parseDouble(tempString);
 					
-					IJ.log("Auto detect - exclude regions (px) = " + removeRadius [segmC]);						
+					IJ.log("Auto detect - exclude regions (calibrated unit) = " + removeRadius [segmC]);						
 				}
 				
 				if(line.contains("No auto-detection of region of interest applied.")){
@@ -1435,13 +1435,13 @@ private boolean importSettings() {
 					IJ.log("Do not auto-detect regions and do not exclude regions");	
 				}
 				
-				if(line.contains("Close gaps for detecting tissue regions (px):")){
+				if(line.contains("Close gaps for detecting tissue regions")){
 					tempString = line.substring(line.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					linkForROI [segmC] = true;
 					linkGapsForRemoveRadius [segmC] = Double.parseDouble(tempString);
 					
-					IJ.log("Close gaps for detecting tissue regions rad = " + linkGapsForRemoveRadius [segmC]);						
+					IJ.log("Close gaps for detecting tissue regions rad (calibrated unit) = " + linkGapsForRemoveRadius [segmC]);						
 				}
 				
 				if(line.contains("Despeckle mask")){
@@ -1469,6 +1469,84 @@ private boolean importSettings() {
 							darkBackground [db] = false;						
 						}
 						IJ.log("Light background");
+					}
+					
+					//If older versions than 0.1.2 were loaded > show a notice that values may need to be respecified! TODO
+					if(line.contains("0.0.1") || line.contains("0.0.2") || line.contains("0.0.3") || line.contains("0.0.4") || line.contains("0.0.5")
+							|| line.contains("0.0.6") || line.contains("0.0.7") || line.contains("0.0.8") || line.contains("0.0.9") || line.contains("0.1.0")
+							|| line.contains("0.1.1")) {
+						{
+							GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - loading parameters");	
+							//show Dialog-----------------------------------------------------------------
+							//.setInsets(top, left, bottom)
+							gd.setInsets(0,0,0);		gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2022 JN Hansen", SuperHeadingFont);
+							gd.setInsets(0,0,0);		gd.addMessage("You are loading settings from a previous version, in which parameter settings were given", HeadingFont);
+							gd.setInsets(0,0,0);		gd.addMessage("in pixel and not in calibrated units (e.g., micron). Thus, please make sure to re-specify", HeadingFont);
+							gd.setInsets(0,0,0);		gd.addMessage("the parameters in the following dialogs.", HeadingFont);
+							gd.showDialog();
+							//show Dialog-----------------------------------------------------------------
+							
+							if (gd.wasCanceled()) return false;	
+						}
+						
+						for(int i = 0; i < nCs; i++){
+							GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - adapting parameters");	
+							//show Dialog-----------------------------------------------------------------
+							//.setInsets(top, left, bottom)
+							gd.setInsets(0,0,0);			gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2022 JN Hansen", SuperHeadingFont);
+							gd.setInsets(0,0,0);			gd.addMessage("Settings for channel #" + (i+1) + " - Channel Nr: " + channelIDs [i], HeadingFont);			
+							
+							if(preBlur [i]) {
+								gd.setInsets(0,0,0);	
+								gd.addNumericField("Blur image before analysis - Gaussian sigma (calibrated unit, e.g., µm):", preBlurSigma [i], 3);
+							}
+							
+							if(subtractBluredImage [i]) {
+								gd.setInsets(0,0,0);		
+								gd.addNumericField("Subtract blurred copy of image (to normalize) - Gauss sigma (calibrated unit, e.g., µm)", subtractBlurSigma [i], 3);
+							}
+							
+							if(excludeZeroRegions [i]) {
+								gd.setInsets(0,0,0);
+								gd.addNumericField("Exclude zero-pixels in threshold calc. - tolerated gap radius (calibrated unit, e.g., µm)", closeGapsRadius [i], 3);
+								
+							}
+							
+							if(removeParticles [i]) {
+								gd.setInsets(0,0,0);
+								gd.addNumericField("Detect tissue regions and remove smaller regions | minimum radius (calibrated unit, e.g., µm)", removeRadius [i], 2);	
+							}
+							
+							if(linkForROI [i]) {
+								gd.setInsets(0,0,0);
+								gd.addNumericField("During detecting tissue regions, close gaps | distance (calibrated unit, e.g., µm)", linkGapsForRemoveRadius [i], 2);								
+							}
+							gd.showDialog();
+							//show Dialog-----------------------------------------------------------------
+
+							//read and process variables--------------------------------------------------	
+							{
+								if(preBlur [i]) {
+									preBlurSigma [i] = (double) gd.getNextNumber();
+								}								
+								if(subtractBluredImage [i]) {
+									subtractBlurSigma [i] = (double) gd.getNextNumber();
+								}								
+								if(excludeZeroRegions [i]) {
+									closeGapsRadius [i] = (double) gd.getNextNumber();	
+									
+								}								
+								if(removeParticles [i]) {
+									removeRadius [i] = gd.getNextNumber();	
+								}								
+								if(linkForROI [i]) {
+									linkGapsForRemoveRadius [i] = gd.getNextNumber();								
+								}
+							}
+							//read and process variables--------------------------------------------------
+							
+							if (gd.wasCanceled()) return false;	
+						}
 					}
 				}
 				
@@ -1531,7 +1609,7 @@ private boolean enterSettings(int defaultType) {
 		GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - set parameters");	
 		//show Dialog-----------------------------------------------------------------
 		//.setInsets(top, left, bottom)
-		gd.setInsets(0,0,0);		gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2021 JN Hansen", SuperHeadingFont);
+		gd.setInsets(0,0,0);		gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2022 JN Hansen", SuperHeadingFont);
 		gd.setInsets(0,0,0);		gd.addMessage("General settings", HeadingFont);
 		gd.setInsets(0,10,0);		gd.addNumericField("Number of different channels to be segmented", numberOfChannels, 0);
 		gd.setInsets(0,10,0);		gd.addCheckbox("Include raw copy of the channel in output image", includeDuplicateChannel);
@@ -1631,34 +1709,34 @@ private boolean enterSettings(int defaultType) {
 			GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - set parameters");	
 			//show Dialog-----------------------------------------------------------------
 			//.setInsets(top, left, bottom)
-			gd.setInsets(0,0,0);			gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2021 JN Hansen", SuperHeadingFont);
+			gd.setInsets(0,0,0);			gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2022 JN Hansen", SuperHeadingFont);
 			gd.setInsets(0,0,0);			gd.addMessage("Settings for channel #" + (i+1), HeadingFont);			
 			
-			gd.setInsets(10,10,0);		gd.addNumericField("Channel Nr (>= 1 & <= nr of channels) for quantification", channelIDs [i], 0);
-			gd.setInsets(0,10,0);		gd.addCheckbox("Blur image before analysis - Gaussian sigma (px)", preBlur [i]);
-			gd.setInsets(-23,100,0);		gd.addNumericField("", preBlurSigma [i], 3);
+			gd.setInsets(10,5,0);		gd.addNumericField("Channel Nr (>= 1 & <= nr of channels) to be segmented", channelIDs [i], 0);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Blur image before analysis - Gaussian sigma (calibrated unit, e.g., µm)", preBlur [i]);
+			gd.setInsets(-23,330,0);		gd.addNumericField("", preBlurSigma [i], 3);
 			
-			gd.setInsets(0,10,0);		gd.addCheckbox("Subtract blurred copy of image (to normalize) - Gauss sigma (px)", subtractBluredImage [i]);
-			gd.setInsets(-23,100,0);		gd.addNumericField("", subtractBlurSigma [i], 3);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Subtract blurred copy of image (to normalize) - Gauss sigma (calibrated unit, e.g., µm)", subtractBluredImage [i]);
+			gd.setInsets(-23,330,0);		gd.addNumericField("", subtractBlurSigma [i], 3);
 			
 			
-			gd.setInsets(0,10,0);		gd.addChoice("Segmentation method", algorithm, chosenAlgorithm [i]);
-			gd.setInsets(0,0,0);			gd.addNumericField("If 'CUSTOM threshold' was selected, specify threshold here", customThr [i], 2);
-			gd.setInsets(0,10,0);		gd.addChoice("Background definition", bgMethod, selectedBgVariant [i]);
-			gd.setInsets(0,10,0);		gd.addCheckbox("Exclude zero-pixels in threshold calc. - tolerated gap radius (px)", excludeZeroRegions [i]);
-			gd.setInsets(-23,100,0);		gd.addNumericField("", closeGapsRadius [i], 3);
+			gd.setInsets(0,0,0);			gd.addChoice("Segmentation method", algorithm, chosenAlgorithm [i]);
+			gd.setInsets(0,5,0);			gd.addNumericField("If 'CUSTOM threshold' selected, specify threshold here", customThr [i], 2);
+			gd.setInsets(0,0,0);			gd.addChoice("Background definition", bgMethod, selectedBgVariant [i]);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Exclude zero-pixels in threshold calc. - tolerated gap radius (calibrated unit, e.g., µm)", excludeZeroRegions [i]);
+			gd.setInsets(-23,330,0);		gd.addNumericField("", closeGapsRadius [i], 3);
 			
-			gd.setInsets(0,10,0);		gd.addCheckbox("Despeckle segmented image", despeckle [i]);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Despeckle segmented image", despeckle [i]);
 
-			gd.setInsets(0,10,0);		gd.addCheckbox("Detect tissue regions and remove smaller regions | minimum radius", removeParticles [i]);
-			gd.setInsets(-23,100,0);		gd.addNumericField("", removeRadius [i], 2);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Detect tissue regions and remove smaller regions | minimum radius (calibrated unit, e.g., µm)", removeParticles [i]);
+			gd.setInsets(-23,330,0);		gd.addNumericField("", removeRadius [i], 2);
 			
-			gd.setInsets(0,10,0);		gd.addCheckbox("During detecting tissue regions, close gaps | distance", linkForROI [i]);
-			gd.setInsets(-23,100,0);		gd.addNumericField("", linkGapsForRemoveRadius [i], 2);
+			gd.setInsets(0,0,0);			gd.addCheckbox("During detecting tissue regions, close gaps | distance (calibrated unit, e.g., µm)", linkForROI [i]);
+			gd.setInsets(-23,330,0);		gd.addNumericField("", linkGapsForRemoveRadius [i], 2);
 			
-			gd.setInsets(0,10,0);		gd.addCheckbox("Fill holes in segmented image", fillHoles [i]);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Fill holes in segmented image", fillHoles [i]);
 			
-			gd.setInsets(0,10,0);		gd.addCheckbox("Apply Watershed algorithm", watershed [i]);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Apply Watershed algorithm", watershed [i]);
 			
 			gd.showDialog();
 			//show Dialog-----------------------------------------------------------------
@@ -1811,11 +1889,11 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			tp.append("	Channel Nr:	" + df0.format(channelIDs [i]));			
 			
 			if(preBlur [i]){
-				tp.append("	Blur image before analysis - Gaussian sigma (px):	" + df6.format(preBlurSigma [i]));
+				tp.append("	Blur image before analysis - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(preBlurSigma [i]));
 			}else{tp.append("");}
 			
 			if(subtractBluredImage [i]){
-				tp.append("	Subtract blurred copy of the image (for normalization) - Gaussian sigma (px):	" + df6.format(subtractBlurSigma [i]));
+				tp.append("	Subtract blurred copy of the image (for normalization) - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(subtractBlurSigma [i]));
 			}else{tp.append("");}
 					
 			if (chosenAlgorithm [i] == "CUSTOM threshold"){
@@ -1833,7 +1911,7 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			}
 
 			if(excludeZeroRegions [i]){
-				tp.append("	Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (px):	" + df6.format(closeGapsRadius [i]));
+				tp.append("	Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (" + imp.getCalibration().getUnit() + "):	" + df6.format(closeGapsRadius [i]));
 			}else{tp.append("");}		
 			
 			
@@ -1842,9 +1920,9 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			}else{tp.append("");}
 			
 			if(removeParticles [i]) {
-				tp.append("	Auto detect the region of interest - radius of exluded regions (px):	" + df6.format(removeRadius [i]));
+				tp.append("	Auto detect the region of interest - radius of exluded regions (" + imp.getCalibration().getUnit() + "):	" + df6.format(removeRadius [i]));
 				if(linkForROI [i]){
-					tp.append("	Close gaps for detecting tissue regions (px):	" + df6.format(linkGapsForRemoveRadius [i]));
+					tp.append("	Close gaps for detecting tissue regions (" + imp.getCalibration().getUnit() + "):	" + df6.format(linkGapsForRemoveRadius [i]));
 				}else{tp.append("");}		
 			}else{
 				tp.append("	No auto-detection of region of interest applied.");
