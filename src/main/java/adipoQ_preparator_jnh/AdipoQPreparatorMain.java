@@ -1329,6 +1329,7 @@ private boolean importSettings() {
 	//read individual channel settings
 	String tempString;
 	
+	numberOfChannels = nCs;
 	channelIDs = new int [nCs];	
 	preBlur = new boolean [nCs];
 	preBlurSigma = new double [nCs];
@@ -1555,7 +1556,7 @@ private boolean importSettings() {
 						IJ.log("Light background");
 					}
 					
-					//If older versions than 0.1.2 were loaded > show a notice that values may need to be respecified! TODO
+					//If older versions than 0.1.2 were loaded > show a notice that values may need to be respecified!
 					if(line.contains("0.0.1") || line.contains("0.0.2") || line.contains("0.0.3") || line.contains("0.0.4") || line.contains("0.0.5")
 							|| line.contains("0.0.6") || line.contains("0.0.7") || line.contains("0.0.8") || line.contains("0.0.9") || line.contains("0.1.0")
 							|| line.contains("0.1.1")) {
