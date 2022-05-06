@@ -1271,6 +1271,9 @@ private boolean importSettings() {
 		return false;
 	}	
 	
+	String readVersion = "none";
+	boolean uncalibratedVersion = false;
+	
 	IJ.log("READING PREFERENCES:");
 	int nCs = 0;
 	try {
@@ -1288,13 +1291,37 @@ private boolean importSettings() {
 			}	
 			if(line.contains("Channel Nr:")){
 				nCs++;
-			}		
+			}
+			if(line.contains("'AdipoQ Preparator'")) {
+				line = br.readLine();
+				line = br.readLine();
+				if(line.contains("Plug-in version:")) {
+					readVersion = line.substring(line.lastIndexOf("	")+1);
+					if(readVersion.equals("0.0.1") || readVersion.equals("0.0.2") || readVersion.equals("0.0.3") || readVersion.equals("0.0.4") || readVersion.equals("0.0.5")
+							|| readVersion.equals("0.0.6") || readVersion.equals("0.0.7") || readVersion.equals("0.0.8") || readVersion.equals("0.0.9") || readVersion.equals("0.1.0")
+							|| readVersion.equals("0.1.1")) {
+						uncalibratedVersion = true;
+					}
+					if(uncalibratedVersion) {
+						IJ.log("Loaded file comes from a unc. version (" + readVersion + ")");
+					}else {
+						IJ.log("Loaded file comes from version " + readVersion);
+					}					
+				}else {
+					IJ.error("File loading failed - Plugin version info missing in file.");
+					return false;
+				}
+			}
 		}					
 		br.close();
 		fr.close();
 	}catch (IOException e) {
 		IJ.error("Problem with loading preferences");
 		e.printStackTrace();
+		return false;
+	}
+	if(readVersion.equals("none")) {
+		IJ.error("File loading failed - Plugin version info missing in file.");
 		return false;
 	}
 	IJ.log("Number of channels to be segmented: " + nCs);
@@ -1373,32 +1400,57 @@ private boolean importSettings() {
 				
 				if(line.contains("Blur image before analysis - Gaussian sigma")){
 					preBlur [segmC] = true;
-					tempString = line.substring(0, line.lastIndexOf("	"));
-					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
-					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					if(uncalibratedVersion) {
+						tempString = line.substring(line.lastIndexOf("	")+1);
+					}else {
+						tempString = line.substring(0, line.lastIndexOf("	"));
+						tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+						tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					}
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					preBlurSigma [segmC] = Double.parseDouble(tempString);
-					IJ.log("Blur image before analysis - Gaussian sigma (calibrated unit) = " + preBlurSigma [segmC]);						
+					if(uncalibratedVersion) {
+						IJ.log("Blur image before analysis - Gaussian sigma (px) = " + preBlurSigma [segmC]);							
+					}else {
+						IJ.log("Blur image before analysis - Gaussian sigma (calibrated unit) = " + preBlurSigma [segmC]);	
+					}
 				}
 				
 				if(line.contains("Subtract blurred copy of the image (for normalization) - Gaussian sigma")){
 					subtractBluredImage [segmC] = true;
-					tempString = line.substring(0, line.lastIndexOf("	"));
-					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
-					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					if(uncalibratedVersion) {
+						tempString = line.substring(line.lastIndexOf("	")+1);
+					}else {
+						tempString = line.substring(0, line.lastIndexOf("	"));
+						tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+						tempString = tempString.substring(tempString.lastIndexOf("	")+1);						
+					}
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					subtractBlurSigma [segmC] = Double.parseDouble(tempString);
-					IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (calibrated unit) = " + subtractBlurSigma [segmC]);						
+					if(uncalibratedVersion) {
+						IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (px) = " + subtractBlurSigma [segmC]);						
+					}else {
+						IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (calibrated unit) = " + subtractBlurSigma [segmC]);		
+						
+					}				
 				}
 				
 				if(line.contains("Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps")){
 					excludeZeroRegions [segmC] = true;
-					tempString = line.substring(0, line.lastIndexOf("	"));
-					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
-					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					if(uncalibratedVersion) {
+						tempString = line.substring(line.lastIndexOf("	")+1);
+					}else {
+						tempString = line.substring(0, line.lastIndexOf("	"));
+						tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+						tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					}					
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					closeGapsRadius [segmC] = Double.parseDouble(tempString);
-					IJ.log("Exclude zero intensity - close gaps rad (calibrated unit) = " + closeGapsRadius [segmC]);						
+					if(uncalibratedVersion) {
+						IJ.log("Exclude zero intensity - close gaps rad (px) = " + closeGapsRadius [segmC]);	
+					}else{
+						IJ.log("Exclude zero intensity - close gaps rad (calibrated unit) = " + closeGapsRadius [segmC]);						
+					}
 				}
 				
 				if(line.contains("Segmentation method:")){
@@ -1436,13 +1488,20 @@ private boolean importSettings() {
 				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions") 
 						|| line.contains("Auto detect the region of interest - radius of exluded regions")){
 					removeParticles [segmC] = true;
-					tempString = line.substring(0, line.lastIndexOf("	"));
-					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
-					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					if(uncalibratedVersion) {
+						tempString = line.substring(line.lastIndexOf("	")+1);
+					}else {
+						tempString = line.substring(0, line.lastIndexOf("	"));
+						tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+						tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					}					
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					removeRadius [segmC] = Double.parseDouble(tempString);
-					
-					IJ.log("Auto detect - exclude regions (calibrated unit) = " + removeRadius [segmC]);						
+					if(uncalibratedVersion) {
+						IJ.log("Auto detect - exclude regions (px) = " + removeRadius [segmC]);							
+					}else {
+						IJ.log("Auto detect - exclude regions (calibrated unit) = " + removeRadius [segmC]);							
+					}					
 				}
 				
 				if(line.contains("No auto-detection of region of interest applied.")){
@@ -1452,14 +1511,21 @@ private boolean importSettings() {
 				}
 				
 				if(line.contains("Close gaps for detecting tissue regions")){
-					tempString = line.substring(0, line.lastIndexOf("	"));
-					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
-					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					if(uncalibratedVersion) {
+						tempString = line.substring(line.lastIndexOf("	")+1);
+					}else {
+						tempString = line.substring(0, line.lastIndexOf("	"));
+						tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+						tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					}
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					linkForROI [segmC] = true;
-					linkGapsForRemoveRadius [segmC] = Double.parseDouble(tempString);
-					
-					IJ.log("Close gaps for detecting tissue regions rad (calibrated unit) = " + linkGapsForRemoveRadius [segmC]);						
+					linkGapsForRemoveRadius [segmC] = Double.parseDouble(tempString);					
+					if(uncalibratedVersion) {
+						IJ.log("Close gaps for detecting tissue regions rad (calibrated unit) = " + linkGapsForRemoveRadius [segmC]);						
+					}else {
+						IJ.log("Close gaps for detecting tissue regions rad (calibrated unit) = " + linkGapsForRemoveRadius [segmC]);
+					}
 				}
 				
 				if(line.contains("Despeckle mask")){
