@@ -86,15 +86,15 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 
 	int channelIDs [] = new int []{1,2,3};
 	boolean preBlur [] = new boolean []{true,true,true};
-	double preBlurSigma [] = new double [] {2.0,2.0,2.0};
+	double preBlurSigma [] = new double [] {1.8,1.8,1.8};
 	boolean subtractBluredImage [] = new boolean []{true,true,true};
-	double subtractBlurSigma [] = new double [] {3.0,3.0,3.0};
+	double subtractBlurSigma [] = new double [] {2.7,2.7,2.7};
 	
 	boolean excludeZeroRegions [] = new boolean []{true,true,true};
-	double closeGapsRadius [] = new double [] {5.0,5.0,5.0};
+	double closeGapsRadius [] = new double [] {2.2,2.2,2.2};
 	boolean removeParticles [] = new boolean []{true,true,true};
-	double removeRadius [] = new double [] {20.0,20.0,20.0};
-	double linkGapsForRemoveRadius [] = new double [] {5.0,5.0,5.0};
+	double removeRadius [] = new double [] {8.8,8.8,8.8};
+	double linkGapsForRemoveRadius [] = new double [] {2.2,2.2,2.2};
 	final static String [] algorithm = {"Default", "IJ_IsoData", "Huang", "Intermodes", "IsoData", "Li", "MaxEntropy", "Mean", 
 			"MinError", "Minimum", "Moments", "Otsu", "Percentile", "RenyiEntropy", "Shanbhag", "Triangle", 
 			"Yen", "CUSTOM threshold"};
@@ -1678,12 +1678,12 @@ private boolean enterSettings(int defaultType) {
 			subtractBluredImage [i] = false;
 			subtractBlurSigma [i] = 0.0;
 			excludeZeroRegions [i] = true;
-			closeGapsRadius [i] = 5.0;
+			closeGapsRadius [i] = 2.2;
 			removeParticles [i] = true;
-			removeRadius [i] = 20.0;
+			removeRadius [i] = 8.8;
 			despeckle [i] = true;
 			linkForROI [i] = false;
-			linkGapsForRemoveRadius [i] = 5.0;
+			linkGapsForRemoveRadius [i] = 2.2;
 			chosenAlgorithm [i] = "Triangle";
 			customThr [i] = 0.0;
 			darkBackground [i] = false;
@@ -1692,16 +1692,16 @@ private boolean enterSettings(int defaultType) {
 		}else if (defaultType == 1){
 			/**DAPI settings*/
 			preBlur [i] = true;
-			preBlurSigma [i] = 2.0;
+			preBlurSigma [i] = 1.8;
 			subtractBluredImage [i] = true;
-			subtractBlurSigma [i] = 3.0;
+			subtractBlurSigma [i] = 2.7;
 			excludeZeroRegions [i] = false;
-			closeGapsRadius [i] = 5.0;
+			closeGapsRadius [i] = 4.5;
 			removeParticles [i] = false;
-			removeRadius [i] = 20.0;
+			removeRadius [i] = 18.0;
 			despeckle [i] = false;
 			linkForROI [i] = false;
-			linkGapsForRemoveRadius [i] = 5.0;
+			linkGapsForRemoveRadius [i] = 4.5;
 			chosenAlgorithm [i] = "Otsu";
 			customThr [i] = 0.0;
 			darkBackground [i] = true;
