@@ -629,7 +629,7 @@ public void run(String arg) {
 			addSettingsBlockToPanel(tp1,  startDate, name[task], totSeries[task]>1, series[task], imp);
 			tp1.append("");
 			
-			//processing
+			//processing			
 			progress.updateBarText("Extract channel " + channelIDs [0] + " ...");
 			
 			originalLuts = new LUT [imp.getNChannels()];
@@ -674,14 +674,22 @@ public void run(String arg) {
 				}
 		   	}
 		   	
+		   	/*
+		   	 * Calculate 
+		   	 * */
+		   	double pixelWidth = imp.getCalibration().pixelWidth;
+		   	double pixelHeight = imp.getCalibration().pixelHeight;
+		   	double pixelDepth = imp.getCalibration().pixelDepth;
+		   	String pixelUnit = imp.getCalibration().getUnit();
+		   	
 		   	for(int segmC = 0; segmC < numberOfChannels; segmC++) {
 //	   			tempImp.show();
 //				new WaitForUserDialog("before blur").show();
 //				tempImp.hide();
 				
 				if(preBlur [segmC]) {
-					progress.updateBarText("Bluring image ...");
-					tempImp [segmC].getProcessor().blurGaussian(preBlurSigma [segmC]);
+					progress.updateBarText("Bluring image ... " + dfDialog.format(preBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + "");
+					tempImp [segmC].getProcessor().blurGaussian(preBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight));
 					progress.addToBar(1.0/(double)numberOfChannels*0.1);
 					
 //					tempImp.show();
@@ -690,8 +698,8 @@ public void run(String arg) {
 				}
 				
 				if(subtractBluredImage [segmC]) {
-					progress.updateBarText("Subtract blured image ...");
-					tempImp [segmC] = subtractABluredImage(tempImp [segmC], subtractBlurSigma [segmC]);
+					progress.updateBarText("Subtract blured image ... " + dfDialog.format(subtractBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + "");
+					tempImp [segmC] = subtractABluredImage(tempImp [segmC], subtractBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight));
 					progress.addToBar(1.0/(double)numberOfChannels*0.1);
 
 //					tempImp.show();
@@ -706,8 +714,8 @@ public void run(String arg) {
 	   			
 				Roi regionsAboveZero = null;
 				if(excludeZeroRegions [segmC]) {
-					progress.updateBarText("get non-zero-pixel ROI (close-gaps radius = " + dfDialog.format(closeGapsRadius [segmC]) + ")...");
-					regionsAboveZero = getRegionsAboveZeroAsROI(tempImp [segmC], 1, closeGapsRadius [segmC]);	
+					progress.updateBarText("get non-zero-pixel ROI (close-gaps radius = " + dfDialog.format(closeGapsRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + ")...");
+					regionsAboveZero = getRegionsAboveZeroAsROI(tempImp [segmC], 1, closeGapsRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight));	
 					tempImp [segmC].setRoi(regionsAboveZero);
 					//save ROI
 					RoiEncoder re;
@@ -793,8 +801,8 @@ public void run(String arg) {
 						stayAwake();
 					}
 					
-					progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius [segmC]) + " px)...");
-					mask = getFillHolesAndRemoveNoise(tempImp [segmC], linkGapsForRemoveRadius [segmC], removeRadius [segmC], segmC);
+					progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + ")...");
+					mask = getFillHolesAndRemoveNoise(tempImp [segmC], linkGapsForRemoveRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight), removeRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight), segmC);
 					
 					progress.addToBar(1.0/(double)numberOfChannels*0.1);
 
@@ -1365,7 +1373,9 @@ private boolean importSettings() {
 				
 				if(line.contains("Blur image before analysis - Gaussian sigma")){
 					preBlur [segmC] = true;
-					tempString = line.substring(line.lastIndexOf("	")+1);
+					tempString = line.substring(0, line.lastIndexOf("	"));
+					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					preBlurSigma [segmC] = Double.parseDouble(tempString);
 					IJ.log("Blur image before analysis - Gaussian sigma (calibrated unit) = " + preBlurSigma [segmC]);						
@@ -1373,7 +1383,9 @@ private boolean importSettings() {
 				
 				if(line.contains("Subtract blurred copy of the image (for normalization) - Gaussian sigma")){
 					subtractBluredImage [segmC] = true;
-					tempString = line.substring(line.lastIndexOf("	")+1);
+					tempString = line.substring(0, line.lastIndexOf("	"));
+					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					subtractBlurSigma [segmC] = Double.parseDouble(tempString);
 					IJ.log("Subtract blurred copy of the image (for normalization) - Gaussian sigma (calibrated unit) = " + subtractBlurSigma [segmC]);						
@@ -1381,7 +1393,9 @@ private boolean importSettings() {
 				
 				if(line.contains("Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps")){
 					excludeZeroRegions [segmC] = true;
-					tempString = line.substring(line.lastIndexOf("	")+1);
+					tempString = line.substring(0, line.lastIndexOf("	"));
+					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					closeGapsRadius [segmC] = Double.parseDouble(tempString);
 					IJ.log("Exclude zero intensity - close gaps rad (calibrated unit) = " + closeGapsRadius [segmC]);						
@@ -1422,7 +1436,9 @@ private boolean importSettings() {
 				if(line.contains("Radius of particles to be removed as noise while detecting adipose tissue regions") 
 						|| line.contains("Auto detect the region of interest - radius of exluded regions")){
 					removeParticles [segmC] = true;
-					tempString = line.substring(line.lastIndexOf("	")+1);
+					tempString = line.substring(0, line.lastIndexOf("	"));
+					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					removeRadius [segmC] = Double.parseDouble(tempString);
 					
@@ -1436,7 +1452,9 @@ private boolean importSettings() {
 				}
 				
 				if(line.contains("Close gaps for detecting tissue regions")){
-					tempString = line.substring(line.lastIndexOf("	")+1);
+					tempString = line.substring(0, line.lastIndexOf("	"));
+					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
 					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 					linkForROI [segmC] = true;
 					linkGapsForRemoveRadius [segmC] = Double.parseDouble(tempString);
@@ -1871,6 +1889,18 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 	}else{
 		tp.append("Image name:	" + name);		
 	}
+	tp.append("Image metadata:");
+	tp.append("	Width [voxel]:	" + imp.getWidth());
+	tp.append("	Height [voxel]:	" + imp.getHeight());
+	tp.append("	Number of channels:	" + imp.getNChannels());
+	tp.append("	Number of Slices:	" + imp.getNSlices());
+	tp.append("	Number of Frames:	" + imp.getNFrames());
+	tp.append("	Voxel width:	" + imp.getCalibration().pixelWidth);
+	tp.append("	Voxel height:	" + imp.getCalibration().pixelHeight);
+	tp.append("	Voxel depth:	" + imp.getCalibration().pixelDepth);
+	tp.append("	Frame interval:	" + imp.getCalibration().frameInterval);
+	tp.append("	Spatial unit:	" + imp.getCalibration().getUnit());
+	tp.append("	Temporal unit:	" + imp.getCalibration().getTimeUnit());
 	
 	tp.append("General settings:");
 	{
@@ -1889,11 +1919,13 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			tp.append("	Channel Nr:	" + df0.format(channelIDs [i]));			
 			
 			if(preBlur [i]){
-				tp.append("	Blur image before analysis - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(preBlurSigma [i]));
+				tp.append("	Blur image before analysis - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(preBlurSigma [i])
+				+ "	-> in pixel:	" + df6.format(preBlurSigma[i] / (0.5 * imp.getCalibration().pixelWidth + 0.5 * imp.getCalibration().pixelHeight)) + "");
 			}else{tp.append("");}
 			
 			if(subtractBluredImage [i]){
-				tp.append("	Subtract blurred copy of the image (for normalization) - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(subtractBlurSigma [i]));
+				tp.append("	Subtract blurred copy of the image (for normalization) - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(subtractBlurSigma [i])
+				+ "	-> in pixel:	" + df6.format(subtractBlurSigma [i] / (0.5 * imp.getCalibration().pixelWidth + 0.5 * imp.getCalibration().pixelHeight)) + "");
 			}else{tp.append("");}
 					
 			if (chosenAlgorithm [i] == "CUSTOM threshold"){
@@ -1911,7 +1943,8 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			}
 
 			if(excludeZeroRegions [i]){
-				tp.append("	Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (" + imp.getCalibration().getUnit() + "):	" + df6.format(closeGapsRadius [i]));
+				tp.append("	Excluded zero intensity pixels in threshold calculation - radius of tolerated gaps (" + imp.getCalibration().getUnit() + "):	" + df6.format(closeGapsRadius [i])
+					+ "	-> in pixel:	" + df6.format(closeGapsRadius [i] / (0.5 * imp.getCalibration().pixelWidth + 0.5 * imp.getCalibration().pixelHeight)) + "");
 			}else{tp.append("");}		
 			
 			
@@ -1920,9 +1953,11 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			}else{tp.append("");}
 			
 			if(removeParticles [i]) {
-				tp.append("	Auto detect the region of interest - radius of exluded regions (" + imp.getCalibration().getUnit() + "):	" + df6.format(removeRadius [i]));
+				tp.append("	Auto detect the region of interest - radius of exluded regions (" + imp.getCalibration().getUnit() + "):	" + df6.format(removeRadius [i])
+					+ "	-> in pixel:	" + df6.format(removeRadius [i] / (0.5 * imp.getCalibration().pixelWidth + 0.5 * imp.getCalibration().pixelHeight)) + "");
 				if(linkForROI [i]){
-					tp.append("	Close gaps for detecting tissue regions (" + imp.getCalibration().getUnit() + "):	" + df6.format(linkGapsForRemoveRadius [i]));
+					tp.append("	Close gaps for detecting tissue regions (" + imp.getCalibration().getUnit() + "):	" + df6.format(linkGapsForRemoveRadius [i])
+						+ "	-> in pixel:	" + df6.format(linkGapsForRemoveRadius [i] / (0.5 * imp.getCalibration().pixelWidth + 0.5 * imp.getCalibration().pixelHeight)) + "");
 				}else{tp.append("");}		
 			}else{
 				tp.append("	No auto-detection of region of interest applied.");
