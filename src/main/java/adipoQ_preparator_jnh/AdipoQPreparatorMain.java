@@ -1297,9 +1297,9 @@ private boolean importSettings() {
 				line = br.readLine();
 				if(line.contains("Plug-in version:")) {
 					readVersion = line.substring(line.lastIndexOf("	")+1);
-					if(readVersion.equals("0.0.1") || readVersion.equals("0.0.2") || readVersion.equals("0.0.3") || readVersion.equals("0.0.4") || readVersion.equals("0.0.5")
-							|| readVersion.equals("0.0.6") || readVersion.equals("0.0.7") || readVersion.equals("0.0.8") || readVersion.equals("0.0.9") || readVersion.equals("0.1.0")
-							|| readVersion.equals("0.1.1")) {
+					if(readVersion.equals("v0.0.1") || readVersion.equals("v0.0.2") || readVersion.equals("v0.0.3") || readVersion.equals("v0.0.4") || readVersion.equals("v0.0.5")
+							|| readVersion.equals("v0.0.6") || readVersion.equals("v0.0.7") || readVersion.equals("v0.0.8") || readVersion.equals("v0.0.9") || readVersion.equals("v0.1.0")
+							|| readVersion.equals("v0.1.1")) {
 						uncalibratedVersion = true;
 					}
 					if(uncalibratedVersion) {
