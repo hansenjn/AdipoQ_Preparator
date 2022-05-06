@@ -1297,9 +1297,9 @@ private boolean importSettings() {
 				line = br.readLine();
 				if(line.contains("Plug-in version:")) {
 					readVersion = line.substring(line.lastIndexOf("	")+1);
-					if(readVersion.equals("v0.0.1") || readVersion.equals("v0.0.2") || readVersion.equals("v0.0.3") || readVersion.equals("v0.0.4") || readVersion.equals("v0.0.5")
-							|| readVersion.equals("v0.0.6") || readVersion.equals("v0.0.7") || readVersion.equals("v0.0.8") || readVersion.equals("v0.0.9") || readVersion.equals("v0.1.0")
-							|| readVersion.equals("v0.1.1")) {
+					if(readVersion.equals("V0.0.1") || readVersion.equals("V0.0.2") || readVersion.equals("V0.0.3") || readVersion.equals("V0.0.4") || readVersion.equals("V0.0.5")
+							|| readVersion.equals("V0.0.6") || readVersion.equals("V0.0.7") || readVersion.equals("V0.0.8") || readVersion.equals("V0.0.9") || readVersion.equals("V0.1.0")
+							|| readVersion.equals("V0.1.1")) {
 						uncalibratedVersion = true;
 					}
 					if(uncalibratedVersion) {
@@ -1455,7 +1455,7 @@ private boolean importSettings() {
 				
 				if(line.contains("Segmentation method:")){
 					if(line.contains("CUSTOM threshold")) {
-						chosenAlgorithm [segmC] = algorithm [18];
+						chosenAlgorithm [segmC] = algorithm [17];
 						line = br.readLine();
 						if(!line.contains("Custom threshold value:")){
 							IJ.error("Could not find custom threshold value in settings - no preferences loaded!");
@@ -1464,7 +1464,7 @@ private boolean importSettings() {
 						tempString = line.substring(line.lastIndexOf("	")+1);
 						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 						customThr [segmC] = Double.parseDouble(tempString);
-						IJ.log("Custom thr" + customThr [segmC]);
+						IJ.log(chosenAlgorithm [segmC] + ": " + customThr [segmC]);
 					}else if(line.contains("applying intensity threshold based ")) {
 						for(int a = 0; a < algorithm.length; a++) {
 							if(line.contains(algorithm[a])) {
