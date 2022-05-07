@@ -980,7 +980,7 @@ public void run(String arg) {
 			   								if(c+1 == channelIDs [segmC]){
 						   						indexOld = tempImp [segmC].getStackIndex(1, s+1, f+1)-1;
 						   						indexNew = outImp.getStackIndex(c+cNew+1, s+1, f+1)-1;
-						   						if(tempImp [segmC].getStack().getVoxel(x, y, indexOld) != 0.0) {			//TODO why set to max?
+						   						if(tempImp [segmC].getStack().getVoxel(x, y, indexOld) != 0.0) {
 						   							outImp.getStack().setVoxel(x, y, indexNew, maxValue);
 						   						}
 						   						cNew ++;
