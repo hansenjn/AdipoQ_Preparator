@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.1.2
+* AdipoQ Preparator Version 0.1.3
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -46,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.1.2";
+	static final String PLUGINVERSION = "0.1.3";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -284,7 +284,13 @@ public void run(String arg) {
 			if(name [i].substring(name[i].lastIndexOf(".")).equals(".tif")
 					|| name [i].substring(name[i].lastIndexOf(".")).equals(".TIF")
 					|| name [i].substring(name[i].lastIndexOf(".")).equals(".tiff")
-					|| name [i].substring(name[i].lastIndexOf(".")).equals(".TIFF")) {
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".TIFF")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".png")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".PNG")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".jpg")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".JPG")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".jpeg")
+					|| name [i].substring(name[i].lastIndexOf(".")).equals(".JPEG")) {
 				continue;
 			}
 			try {
@@ -539,7 +545,9 @@ public void run(String arg) {
 			//open Image
 		   	try{
 		   		if(selectedTaskVariant.equals(taskVariant[1])){
-		   			if(name[task].contains(".tif")){
+		   			if(name[task].contains(".tif") || name[task].contains(".tiff") || name[task].contains(".png") || name[task].contains(".jpeg")
+		   					|| name[task].contains(".JPEG") || name[task].contains(".jpg") || name[task].contains(".JPG") 
+		   					|| name[task].contains(".TIF") || name[task].contains(".TIFF") || name[task].contains(".PNG")){
 		   				//TIFF file
 		   				imp = IJ.openImage(""+dir[task]+name[task]+"");		
 		   			}else{
@@ -591,12 +599,17 @@ public void run(String arg) {
 				progress.moveTask(task);	
 				break running;
 			}			
+			if(imp.getBitDepth() == 24) {
+				//RGB image > Convert to RGB stack
+				imp = CompositeConverter.makeComposite(imp);
+				progress.notifyMessage("Task " + (task+1) + "/" + tasks + ": Images was in RGB format. Thus, images was automatically converted into a 3-channel stack image.", ProgressDialog.LOG);	
+			}
 			if(channelIDs [0] < 1 || channelIDs [0] > imp.getNChannels()) {
 				progress.notifyMessage("Task " + (task+1) + "/" + tasks + ": Could not be processed. Selected channel does not exist in the image!"
 						+ " Select a channel number between 1 and the total number of channels in the image.", ProgressDialog.ERROR);
 				progress.moveTask(task);	
 				break running;
-			}
+			}			
 		   	//Check for problems with the image
 		   	
 		   	//Create Outputfilename
