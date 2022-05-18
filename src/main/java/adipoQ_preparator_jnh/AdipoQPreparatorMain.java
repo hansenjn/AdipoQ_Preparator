@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.1.3
+* AdipoQ Preparator Version 0.1.4
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: May 04, 2022)
+* Date: October 13, 2020 (This Version: May 18, 2022)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -46,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.1.3";
+	static final String PLUGINVERSION = "0.1.4";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -85,6 +85,8 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	int numberOfChannels = 1;
 
 	int channelIDs [] = new int []{1,2,3};
+	boolean subtractBackground [] = new boolean [] {false, false, false};
+	double subtractBGRadius [] = new double [] {30.0, 30.0, 30.0};	
 	boolean preBlur [] = new boolean []{true,true,true};
 	double preBlurSigma [] = new double [] {1.8,1.8,1.8};
 	boolean subtractBluredImage [] = new boolean []{true,true,true};
@@ -696,24 +698,38 @@ public void run(String arg) {
 		   	String pixelUnit = imp.getCalibration().getUnit();
 		   	
 		   	for(int segmC = 0; segmC < numberOfChannels; segmC++) {
-//	   			tempImp.show();
-//				new WaitForUserDialog("before blur").show();
-//				tempImp.hide();
+//	   			tempImp [segmC].show();
+//				new WaitForUserDialog("before treatment").show();
+//				tempImp [segmC].hide();
+		   		
+		   		if(subtractBackground [segmC]) {
+		   			progress.updateBarText("Subtract background " + dfDialog.format(subtractBGRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + "");		
+		   			if(darkBackground [segmC]) {
+		   				IJ.run(tempImp [segmC], "Subtract Background...", "rolling=" + (subtractBGRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + "");
+		   			}else {
+			   			IJ.run(tempImp [segmC], "Subtract Background...", "rolling=" + (subtractBGRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " light");
+		   			}					
+					progress.addToBar(1.0/(double)numberOfChannels*0.1);					
+
+//					tempImp [segmC].show();
+//					new WaitForUserDialog("sbgd").show();
+//					tempImp [segmC].hide();
+		   		}
 				
 				if(preBlur [segmC]) {
 					progress.updateBarText("Bluring image ... " + dfDialog.format(preBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + "");
 					tempImp [segmC].getProcessor().blurGaussian(preBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight));
-					progress.addToBar(1.0/(double)numberOfChannels*0.1);
+					progress.addToBar(1.0/(double)numberOfChannels*0.05);
 					
-//					tempImp.show();
+//					tempImp [segmC].show();
 //					new WaitForUserDialog("blurred").show();
-//					tempImp.hide();
+//					tempImp [segmC].hide();
 				}
 				
 				if(subtractBluredImage [segmC]) {
 					progress.updateBarText("Subtract blured image ... " + dfDialog.format(subtractBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + "");
 					tempImp [segmC] = subtractABluredImage(tempImp [segmC], subtractBlurSigma [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight));
-					progress.addToBar(1.0/(double)numberOfChannels*0.1);
+					progress.addToBar(1.0/(double)numberOfChannels*0.05);
 
 //					tempImp.show();
 //					new WaitForUserDialog("blur substr").show();
@@ -1344,6 +1360,8 @@ private boolean importSettings() {
 	
 	numberOfChannels = nCs;
 	channelIDs = new int [nCs];	
+	subtractBackground = new boolean [nCs];
+	subtractBGRadius = new double [nCs];
 	preBlur = new boolean [nCs];
 	preBlurSigma = new double [nCs];
 	subtractBluredImage = new boolean [nCs];
@@ -1364,6 +1382,8 @@ private boolean importSettings() {
 	
 	for(int i = 0; i < nCs; i++) {
 		channelIDs [i] = -1;
+		subtractBackground [i] = false;
+		subtractBGRadius [i] = -1.0;
 		preBlur [i] = false;
 		preBlurSigma [i] = -1.0;
 		subtractBluredImage [i] = false;
@@ -1410,6 +1430,16 @@ private boolean importSettings() {
 				if(line.contains("Deleted all channels except the channel(s) to be segmented")){
 					deleteOtherChannels = true;
 					IJ.log("Delete other channels");
+				}
+				
+				if(line.contains("Subtract background before analysis - radius")){
+					subtractBackground [segmC] = true;		
+					tempString = line.substring(0, line.lastIndexOf("	"));
+					tempString = tempString.substring(0, tempString.lastIndexOf("	"));
+					tempString = tempString.substring(tempString.lastIndexOf("	")+1);
+					if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+					subtractBGRadius [segmC] = Double.parseDouble(tempString);					
+					IJ.log("Subtract background before analysis - radius (calibrated unit) = " + subtractBGRadius [segmC]);
 				}
 				
 				if(line.contains("Blur image before analysis - Gaussian sigma")){
@@ -1646,6 +1676,16 @@ private boolean importSettings() {
 							if (gd.wasCanceled()) return false;	
 						}
 					}
+					
+					if(line.contains("0.0.1") || line.contains("0.0.2") || line.contains("0.0.3") || line.contains("0.0.4") || line.contains("0.0.5")
+							|| line.contains("0.0.6") || line.contains("0.0.7") || line.contains("0.0.8") || line.contains("0.0.9") || line.contains("0.1.0")
+							|| line.contains("0.1.1") || line.contains("0.1.2")  || line.contains("0.1.3")) {
+						for(int i = 0; i < nCs; i++) {							
+							subtractBackground [i] = false;
+							subtractBGRadius [i] = 0.0;
+							IJ.log("Do not subtract background as loaded version did not contain that function");
+						}
+					}
 				}
 				
 				if(line.contains("'LipiroidQ'")) {
@@ -1664,6 +1704,10 @@ private boolean importSettings() {
 						}
 						IJ.log("Do not auto-detect regions and do not exclude regions");
 						IJ.log("Dark background");
+					}					
+					for(int i = 0; i < nCs; i++) {						
+						subtractBackground [i] = false;
+						subtractBGRadius [i] = 0.0;
 					}
 				}
 			}			
@@ -1730,6 +1774,8 @@ private boolean enterSettings(int defaultType) {
 		Depending on set variant show default settings for one or the other
 	*/
 	channelIDs = new int [numberOfChannels];
+	subtractBackground = new boolean [numberOfChannels];
+	subtractBGRadius = new double [numberOfChannels];
 	preBlur = new boolean [numberOfChannels];
 	preBlurSigma = new double [numberOfChannels];
 	subtractBluredImage = new boolean [numberOfChannels];
@@ -1753,6 +1799,8 @@ private boolean enterSettings(int defaultType) {
 		
 		if(defaultType == 0) {
 			/**Histology settings*/
+			subtractBackground [i] = false;
+			subtractBGRadius [i] = 30.0;
 			preBlur [i] = false;
 			preBlurSigma [i] = 0.0;
 			subtractBluredImage [i] = false;
@@ -1771,6 +1819,8 @@ private boolean enterSettings(int defaultType) {
 			watershed [i] = false;		
 		}else if (defaultType == 1){
 			/**DAPI settings*/
+			subtractBackground [i] = false;
+			subtractBGRadius [i] = 10.0;
 			preBlur [i] = true;
 			preBlurSigma [i] = 1.8;
 			subtractBluredImage [i] = true;
@@ -1811,6 +1861,9 @@ private boolean enterSettings(int defaultType) {
 			gd.setInsets(0,0,0);			gd.addMessage("Settings for channel #" + (i+1), HeadingFont);			
 			
 			gd.setInsets(10,5,0);		gd.addNumericField("Channel Nr (>= 1 & <= nr of channels) to be segmented", channelIDs [i], 0);
+			gd.setInsets(0,0,0);			gd.addCheckbox("Subtract background before analysis - radius (calibrated unit, e.g., µm)", subtractBackground [i]);
+			gd.setInsets(-23,330,0);		gd.addNumericField("", subtractBGRadius [i], 3);
+			
 			gd.setInsets(0,0,0);			gd.addCheckbox("Blur image before analysis - Gaussian sigma (calibrated unit, e.g., µm)", preBlur [i]);
 			gd.setInsets(-23,330,0);		gd.addNumericField("", preBlurSigma [i], 3);
 			
@@ -1842,6 +1895,8 @@ private boolean enterSettings(int defaultType) {
 			//read and process variables--------------------------------------------------	
 			{
 				channelIDs [i] = (int) gd.getNextNumber();
+				subtractBackground [i] = gd.getNextBoolean();
+				subtractBGRadius [i] = (double) gd.getNextNumber();
 				preBlur [i] = gd.getNextBoolean();
 				preBlurSigma [i] = (double) gd.getNextNumber();
 				subtractBluredImage [i] = gd.getNextBoolean();
@@ -1997,6 +2052,11 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 		tp.append("Settings for channel #" + (i+1) + ":");
 		{
 			tp.append("	Channel Nr:	" + df0.format(channelIDs [i]));			
+			
+			if(subtractBackground [i]){
+				tp.append("	Subtract background before analysis - radius (" + imp.getCalibration().getUnit() + "):	" + df6.format(subtractBGRadius [i])
+				+ "	-> in pixel:	" + df6.format(subtractBGRadius[i] / (0.5 * imp.getCalibration().pixelWidth + 0.5 * imp.getCalibration().pixelHeight)) + "");
+			}else{tp.append("");}
 			
 			if(preBlur [i]){
 				tp.append("	Blur image before analysis - Gaussian sigma (" + imp.getCalibration().getUnit() + "):	" + df6.format(preBlurSigma [i])
