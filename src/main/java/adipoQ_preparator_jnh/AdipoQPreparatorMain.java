@@ -1503,6 +1503,16 @@ private boolean importSettings() {
 	watershed  = new boolean [nCs];
 	darkBackground = new boolean [nCs];
 
+	//StarDist		
+	selectedStarDistModel = new String [nCs];
+	starDistNormalizeImage = new boolean [nCs];
+	starDistPercentileLow = new double [nCs];
+	starDistPercentileHigh = new double [nCs];
+	starDistProbabilityScore = new double [nCs];
+	starDistOverlapThreshold = new double [nCs];
+	starDistModelPath = new String [nCs];
+	starDistNTiles = new int [nCs];
+		
 	includeDuplicateChannel = false;
 	deleteOtherChannels = false;
 	
@@ -1522,9 +1532,18 @@ private boolean importSettings() {
 		fillHoles [i] = false;
 		watershed [i] = false;
 		darkBackground [i] = false;
+				
+		//StarDist
+		selectedStarDistModel [i] = "None";
+		starDistNormalizeImage [i] = false;
+		starDistPercentileLow [i] = -1.0;
+		starDistPercentileHigh [i] = -1.0;
+		starDistProbabilityScore [i] = -1.0;
+		starDistOverlapThreshold [i] = -1.0;
+		starDistModelPath [i] = "None";
+		starDistNTiles [i] = -1;
 	}
-	
-	
+		
 	boolean readThrough = false;
 	int segmC = -1;
 	
@@ -1635,6 +1654,89 @@ private boolean importSettings() {
 						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
 						customThr [segmC] = Double.parseDouble(tempString);
 						IJ.log(chosenAlgorithm [segmC] + ": " + customThr [segmC]);
+					}else if(line.contains("StarDist")) {
+						chosenAlgorithm [segmC] = "StarDist";
+						line = br.readLine();
+						line = br.readLine();
+						if(!line.contains("Model:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						selectedStarDistModel [segmC] = line.substring(line.lastIndexOf("	")+1);
+						IJ.log(chosenAlgorithm [segmC] + " - Model:" + selectedStarDistModel [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("Normalize Image:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						if(line.contains("Normalize Image:	TRUE") || line.contains("Normalize Image:	true") || line.contains("Normalize Image:	True")) {
+							starDistNormalizeImage [segmC] = true;
+						}else {
+							starDistNormalizeImage [segmC] = false;
+						}						
+						IJ.log(chosenAlgorithm [segmC] + " - Normalize Image: " + starDistNormalizeImage [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("Percentile low:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						tempString = line.substring(line.lastIndexOf("	")+1);
+						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+						starDistPercentileLow [segmC] = Double.parseDouble(tempString);
+						IJ.log(chosenAlgorithm [segmC] + " - Percentile low: " + starDistPercentileLow [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("Percentile high:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						tempString = line.substring(line.lastIndexOf("	")+1);
+						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+						starDistPercentileHigh [segmC] = Double.parseDouble(tempString);
+						IJ.log(chosenAlgorithm [segmC] + " - Percentile high: " + starDistPercentileHigh [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("Probability / Score threshold:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						tempString = line.substring(line.lastIndexOf("	")+1);
+						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+						starDistProbabilityScore [segmC] = Double.parseDouble(tempString);
+						IJ.log(chosenAlgorithm [segmC] + " - Probability / Score threshold: " + starDistProbabilityScore [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("Overlap threshold:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						tempString = line.substring(line.lastIndexOf("	")+1);
+						if(tempString.contains(",") && !tempString.contains("."))	tempString = tempString.replace(",", ".");
+						starDistOverlapThreshold [segmC] = Double.parseDouble(tempString);
+						IJ.log(chosenAlgorithm [segmC] + " - Overlap threshold: " + starDistOverlapThreshold [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("File path (if load model from .zip file selected):")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						if(line.contains("Model (.zip) from File")) {
+							starDistModelPath [segmC] = line.substring(line.lastIndexOf("	")+1);
+						}else {
+							starDistModelPath [segmC] = "";
+						}						
+						IJ.log(chosenAlgorithm [segmC] + " - Model Path (if custom model): " + starDistModelPath [segmC]);
+						
+						line = br.readLine();
+						if(!line.contains("Nr of tiles:")){
+							IJ.error("Could not find complete StarDist settings in loaded file - no preferences loaded!");
+							return false;
+						}
+						tempString = line.substring(line.lastIndexOf("	")+1);
+						starDistNTiles [segmC] = Integer.parseInt(tempString);
+						IJ.log(chosenAlgorithm [segmC] + " - N Tiles: " + starDistNTiles [segmC]);
 					}else if(line.contains("applying intensity threshold based ")) {
 						for(int a = 0; a < algorithm.length; a++) {
 							if(line.contains(algorithm[a])) {
@@ -1850,6 +1952,15 @@ private boolean importSettings() {
 			IJ.error("Problem with loading preferences - parameters missing or inappropriate text file.");
 			return false;
 		}
+		if(chosenAlgorithm [segmC] == "StarDist") {
+			if(selectedStarDistModel [pos] == "None" || 
+				starDistPercentileLow [pos] == -1.0 || starDistPercentileHigh [pos] == -1.0 || 
+				starDistProbabilityScore [pos] == -1.0 || starDistOverlapThreshold [pos] == -1.0 || 
+				starDistModelPath [pos] == "None" || starDistNTiles [pos] == -1) {
+				IJ.error("Problem with loading StarDist preferences - parameters missing or inappropriate text file.");
+				return false;
+			}
+		}
 	}	
 	return true;
 }
@@ -2045,9 +2156,8 @@ private boolean enterSettings(int defaultType) {
 			
 			gd.setInsets(0,0,0);			gd.addCheckbox("Apply Watershed algorithm", watershed [i]);
 			
-			gd.setInsets(10,0,0);		gd.addMessage("NOTE: When using StarDist as segmentation method, we recommend to disable any post-processing of images.", InstructionsFont);		
-			gd.setInsets(0,0,0);		gd.addMessage("Pre-processing may disturb segmentation as well. Thus, if you use StarDist, we recommend to disable all", InstructionsFont);
-			gd.setInsets(0,0,0);		gd.addMessage("checkboxes in this dialog.", InstructionsFont);
+			gd.setInsets(10,0,0);		gd.addMessage("NOTE: When using StarDist as segmentation method, we recommend to disable any post-processing of the segmentation (despecling, ..., watershed).", InstructionsFont);		
+			gd.setInsets(0,0,0);		gd.addMessage("Pre-processing may disturb segmentation, as well. Thus, if you try StarDist, we recommend to first try it while disabling all checkboxes in this dialog.", InstructionsFont);
 			
 			gd.showDialog();
 			//show Dialog-----------------------------------------------------------------
@@ -2295,7 +2405,18 @@ private void addSettingsBlockToPanel(TextPanel tp, Date startDate, String name, 
 			if (chosenAlgorithm [i] == "CUSTOM threshold"){
 				tp.append("	Segmentation method:	" + "CUSTOM threshold");
 				tp.append("		Custom threshold value:	" + df6.format(customThr [i]));
-			}else{
+			}else if(chosenAlgorithm [i] == "StarDist"){
+				tp.append("	Segmentation method:	" + "StarDist");
+				tp.append("		Cite StarDist when showing the results from this analysis - more information at https://imagej.net/plugins/stardist");
+				tp.append("		Model:	" + selectedStarDistModel [i]);
+				tp.append("		Normalize Image:	" + (starDistNormalizeImage [i]));
+				tp.append("		Percentile low:	" + df6.format(starDistPercentileLow [i]));
+				tp.append("		Percentile high:	" + df6.format(starDistPercentileHigh [i]));
+				tp.append("		Probability / Score threshold:	" + df6.format(starDistProbabilityScore [i]));
+				tp.append("		Overlap threshold:	" + df6.format(starDistOverlapThreshold [i]));
+				tp.append("		File path (if load model from .zip file selected):	" + starDistModelPath [i]);
+				tp.append("		Nr of tiles:	" + df0.format(starDistNTiles [i]));
+			}else {
 				tp.append("	Segmentation method:	applying intensity threshold based on the " + chosenAlgorithm [i] + " threshold algorithm.");
 				tp.append("");				
 			}	
