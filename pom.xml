@@ -11,8 +11,7 @@
  
  	<artifactId>AdipoQ_Preparator_JNH</artifactId>
  	<groupId>JNH</groupId>
-    <version>0.1.4-SNAPSHOT</version>
- 
+    <version>0.2.0-SNAPSHOT</version> 
     <name>AdipoQ_Preparator</name>
     <description>ImageJ plugins to quantify images of cultured cells and adipose tissue - Part I.</description>
  	<url>https://github.com/hansenjn/</url>

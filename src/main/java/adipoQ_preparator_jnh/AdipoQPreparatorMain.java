@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.1.4
+* AdipoQ Preparator Version 0.2.0
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: May 18, 2022)
+* Date: October 13, 2020 (This Version: May 28, 2022)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -46,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.1.4";
+	static final String PLUGINVERSION = "0.2.0";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -64,7 +64,54 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	static SimpleDateFormat NameDateFormatter = new SimpleDateFormat("yyMMdd_HHmmss");
 	static SimpleDateFormat FullDateFormatter = new SimpleDateFormat("yyyy-MM-dd	HH:mm:ss");
 	static SimpleDateFormat FullDateFormatter2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+	//Fix LUTs
+	final static double STARDISTLUTNUMBERS [][] = new double [][] {{0.0,0.0,0.0},{175.0,153.0,230.0},{246.0,248.0,253.0},{79.0,178.0,215.0},
+		{101.0,176.0,142.0},{70.0,82.0,165.0},{41.0,168.0,120.0},{252.0,236.0,247.0},{231.0,178.0,190.0},{210.0,234.0,217.0},
+		{157.0,121.0,169.0},{152.0,218.0,231.0},{89.0,116.0,135.0},{210.0,143.0,173.0},{253.0,251.0,250.0},{250.0,237.0,222.0},
+		{179.0,134.0,128.0},{252.0,247.0,252.0},{146.0,112.0,163.0},{250.0,244.0,249.0},{251.0,241.0,242.0},{231.0,213.0,236.0},
+		{180.0,217.0,208.0},{238.0,231.0,241.0},{206.0,172.0,88.0},{218.0,222.0,246.0},{232.0,222.0,161.0},{184.0,24.0,77.0},
+		{135.0,170.0,175.0},{51.0,198.0,123.0},{252.0,254.0,251.0},{188.0,131.0,219.0},{118.0,238.0,206.0},{188.0,202.0,211.0},
+		{218.0,112.0,99.0},{38.0,88.0,208.0},{214.0,223.0,242.0},{81.0,111.0,181.0},{231.0,130.0,164.0},{111.0,106.0,167.0},
+		{63.0,171.0,80.0},{223.0,245.0,237.0},{249.0,248.0,253.0},{251.0,249.0,247.0},{236.0,236.0,246.0},{206.0,205.0,236.0},
+		{181.0,212.0,94.0},{198.0,160.0,31.0},{124.0,216.0,112.0},{105.0,170.0,117.0},{26.0,137.0,219.0},{31.0,190.0,131.0},
+		{234.0,192.0,195.0},{182.0,121.0,26.0},{229.0,238.0,201.0},{218.0,212.0,31.0},{34.0,47.0,194.0},{112.0,206.0,25.0},
+		{167.0,243.0,227.0},{141.0,165.0,114.0},{193.0,191.0,139.0},{217.0,197.0,158.0},{217.0,219.0,250.0},{229.0,224.0,197.0},
+		{165.0,176.0,110.0},{33.0,211.0,71.0},{155.0,59.0,162.0},{228.0,161.0,69.0},{176.0,109.0,174.0},{221.0,179.0,122.0},
+		{229.0,184.0,190.0},{197.0,220.0,216.0},{213.0,78.0,97.0},{127.0,152.0,193.0},{126.0,102.0,158.0},{230.0,219.0,215.0},
+		{100.0,137.0,85.0},{243.0,224.0,174.0},{209.0,243.0,199.0},{246.0,232.0,196.0},{86.0,210.0,73.0},{110.0,209.0,158.0},
+		{216.0,186.0,168.0},{82.0,55.0,233.0},{119.0,167.0,199.0},{121.0,191.0,73.0},{137.0,198.0,208.0},{195.0,120.0,23.0},
+		{215.0,225.0,234.0},{159.0,69.0,107.0},{145.0,226.0,137.0},{124.0,124.0,174.0},{227.0,212.0,154.0},{248.0,246.0,252.0},
+		{191.0,221.0,181.0},{137.0,144.0,71.0},{124.0,166.0,212.0},{212.0,156.0,148.0},{216.0,150.0,218.0},{226.0,188.0,187.0},
+		{70.0,58.0,231.0},{114.0,156.0,88.0},{158.0,138.0,186.0},{251.0,246.0,247.0},{132.0,200.0,62.0},{232.0,241.0,249.0},
+		{155.0,182.0,216.0},{105.0,181.0,238.0},{239.0,244.0,230.0},{225.0,120.0,149.0},{188.0,237.0,222.0},{226.0,100.0,216.0},
+		{233.0,229.0,252.0},{188.0,242.0,173.0},{232.0,179.0,239.0},{88.0,216.0,137.0},{233.0,203.0,224.0},{183.0,200.0,215.0},
+		{166.0,111.0,150.0},{96.0,83.0,170.0},{220.0,210.0,238.0},{246.0,252.0,252.0},{227.0,117.0,146.0},{144.0,157.0,241.0},
+		{227.0,239.0,234.0},{150.0,166.0,194.0},{252.0,244.0,244.0},{164.0,232.0,148.0},{208.0,210.0,247.0},{236.0,252.0,230.0},
+		{204.0,217.0,249.0},{71.0,182.0,134.0},{223.0,213.0,174.0},{148.0,190.0,136.0},{43.0,123.0,180.0},{115.0,162.0,219.0},
+		{60.0,150.0,223.0},{226.0,227.0,238.0},{54.0,63.0,161.0},{245.0,252.0,249.0},{190.0,122.0,165.0},{127.0,186.0,139.0},
+		{30.0,179.0,122.0},{160.0,101.0,139.0},{193.0,119.0,208.0},{243.0,241.0,247.0},{173.0,129.0,62.0},{253.0,240.0,246.0},
+		{231.0,226.0,244.0},{231.0,112.0,113.0},{180.0,174.0,124.0},{180.0,95.0,162.0},{222.0,221.0,170.0},{60.0,89.0,154.0},
+		{167.0,135.0,41.0},{203.0,132.0,197.0},{161.0,42.0,183.0},{74.0,152.0,207.0},{83.0,188.0,130.0},{193.0,132.0,88.0},
+		{78.0,53.0,191.0},{79.0,129.0,115.0},{92.0,37.0,203.0},{231.0,162.0,217.0},{254.0,249.0,249.0},{254.0,253.0,254.0},
+		{189.0,144.0,141.0},{71.0,183.0,89.0},{194.0,175.0,224.0},{206.0,208.0,146.0},{253.0,254.0,254.0},{184.0,87.0,40.0},
+		{227.0,231.0,213.0},{208.0,98.0,85.0},{177.0,67.0,211.0},{213.0,233.0,173.0},{50.0,229.0,63.0},{217.0,190.0,202.0},
+		{152.0,128.0,234.0},{186.0,155.0,148.0},{222.0,222.0,151.0},{98.0,124.0,194.0},{187.0,212.0,233.0},{171.0,203.0,128.0},
+		{188.0,126.0,151.0},{223.0,227.0,234.0},{238.0,247.0,249.0},{32.0,103.0,186.0},{126.0,88.0,187.0},{131.0,189.0,122.0},
+		{220.0,234.0,225.0},{253.0,253.0,252.0},{251.0,252.0,249.0},{244.0,237.0,239.0},{143.0,109.0,186.0},{253.0,254.0,254.0},
+		{148.0,168.0,113.0},{114.0,203.0,34.0},{250.0,247.0,245.0},{75.0,201.0,151.0},{184.0,239.0,176.0},{77.0,58.0,163.0},
+		{202.0,226.0,208.0},{242.0,243.0,231.0},{195.0,108.0,93.0},{209.0,151.0,111.0},{126.0,120.0,198.0},{191.0,242.0,228.0},
+		{63.0,181.0,214.0},{224.0,32.0,151.0},{189.0,152.0,155.0},{180.0,227.0,70.0},{220.0,220.0,241.0},{125.0,223.0,54.0},
+		{226.0,144.0,132.0},{247.0,239.0,253.0},{168.0,236.0,162.0},{226.0,243.0,231.0},{241.0,246.0,250.0},{233.0,201.0,233.0},
+		{190.0,198.0,228.0},{252.0,248.0,251.0},{254.0,255.0,254.0},{201.0,120.0,222.0},{145.0,154.0,71.0},{202.0,91.0,123.0},
+		{100.0,91.0,159.0},{177.0,192.0,140.0},{150.0,94.0,112.0},{184.0,147.0,242.0},{160.0,180.0,141.0},{241.0,244.0,234.0},
+		{247.0,252.0,253.0},{203.0,174.0,168.0},{185.0,225.0,63.0},{153.0,232.0,196.0},{227.0,252.0,233.0},{118.0,210.0,190.0},
+		{178.0,213.0,160.0},{85.0,141.0,203.0},{235.0,108.0,212.0},{210.0,183.0,117.0},{99.0,173.0,181.0},{234.0,212.0,124.0},
+		{132.0,105.0,194.0},{140.0,178.0,154.0},{157.0,188.0,208.0},{229.0,232.0,202.0},{226.0,207.0,80.0},{238.0,249.0,248.0},
+		{224.0,244.0,227.0},{153.0,65.0,97.0},{156.0,58.0,224.0},{169.0,105.0,235.0},{212.0,24.0,133.0},{198.0,155.0,113.0}};
 	
+	LUT starDistLUT;
+		
 	//Progress Dialog
 	ProgressDialog progress;	
 	boolean processingDone = false;	
@@ -99,7 +146,7 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	double linkGapsForRemoveRadius [] = new double [] {2.2,2.2,2.2};
 	final static String [] algorithm = {"Default", "IJ_IsoData", "Huang", "Intermodes", "IsoData", "Li", "MaxEntropy", "Mean", 
 			"MinError", "Minimum", "Moments", "Otsu", "Percentile", "RenyiEntropy", "Shanbhag", "Triangle", 
-			"Yen", "CUSTOM threshold"};
+			"Yen", "CUSTOM threshold", "StarDist"};
 	String chosenAlgorithm [] = new String [] {"Triangle","Triangle","Triangle"};
 	double customThr [] = new double [] {0.0,0.0,0.0};
 	boolean darkBackground [] = new boolean []{false,false,false};
@@ -119,6 +166,17 @@ public class AdipoQPreparatorMain implements PlugIn, Measurements {
 
 	Robot robo;
 	boolean keepAwake = false;
+	
+	//StarDist (implemented from v0.2.0 on)
+	final static String [] STARDISTMODELS = {"Versatile (fluorescent nuclei)","Versatile (H&E nuclei)", "DSB 2018 (from StarDist 2D paper)","Model (.zip) from File"};
+	String selectedStarDistModel [] = new String [] {STARDISTMODELS[0],STARDISTMODELS[0],STARDISTMODELS[0]};
+	boolean starDistNormalizeImage [] = new boolean [] {true,true,true};
+	double starDistPercentileLow [] = new double [] {1.0,1.0,1.0};
+	double starDistPercentileHigh [] = new double [] {99.8,99.8,99.8};
+	double starDistProbabilityScore [] = new double [] {0.48,0.48,0.48};
+	double starDistOverlapThreshold [] = new double [] {0.3,0.3,0.3};
+	String starDistModelPath [] = new String [] {"","",""};
+	int starDistNTiles [] = new int [] {1,1,1};
 	//-----------------define params-----------------
 	
 	//Variables for processing of an individual task
@@ -516,6 +574,8 @@ public void run(String arg) {
    	int indexOld, indexNew;
 
 	boolean backgroundPref = Prefs.blackBackground;
+
+	starDistLUT = getLUT(STARDISTLUTNUMBERS, false);
 	
 	if(keepAwake) {
    		try {
@@ -756,7 +816,47 @@ public void run(String arg) {
 					}
 				}
 				
-				if(!chosenAlgorithm [segmC].equals("CUSTOM threshold")) {				
+				if(chosenAlgorithm [segmC].equals("CUSTOM threshold")) {
+					progress.updateBarText("Set custom threshold " + customThr + " ...");
+					threshold = customThr [segmC];
+					tp1.append("Used " + chosenAlgorithm + " as intensity threshold - threshold value:	" + df6.format(threshold));
+
+					progress.addToBar(1.0/(double)numberOfChannels*0.5);
+					
+					progress.updateBarText("Segment image with threshold " + dfDialog.format(threshold) + " ...");
+					segmentImage(tempImp [segmC], threshold, 0, tempImp [segmC], 0, false, darkBackground [segmC]);
+
+					progress.addToBar(1.0/(double)numberOfChannels*0.1);
+				}else if (chosenAlgorithm [segmC].equals("StarDist")){
+					tempImp [segmC].show();
+					progress.updateBarText("StarDist detection running ...");
+					String runText = ("command=[de.csbdresden.stardist.StarDist2D], "
+							+ "args=['input':'" + tempImp[segmC].getTitle() +"', 'modelChoice':'" + selectedStarDistModel [segmC] + "', ");
+							if(starDistNormalizeImage[segmC]) {
+								runText += "'normalizeInput':'true', ";
+							}else {
+								runText += "'normalizeInput':'false', ";
+							}							
+							runText += "'percentileBottom':'" + dfDialog.format(starDistPercentileLow[segmC]) + "', 'percentileTop':'" + dfDialog.format(starDistPercentileHigh[segmC]) + "', "
+									+ "'probThresh':'" + dfDialog.format(starDistProbabilityScore[segmC]) + "', " + "'nmsThresh':'" + dfDialog.format(starDistOverlapThreshold[segmC]) 
+									+ "', 'outputType':'Label Image', ";
+							if(selectedStarDistModel [segmC].equals("Model (.zip) from File")){
+								runText += "'modelFile':'" + starDistModelPath [segmC] + "', ";
+							}
+							runText += "'nTiles':'" + starDistNTiles [segmC] + "', 'excludeBoundary':'2', 'roiPosition':'Automatic', "
+							+ "'verbose':'false', 'showCsbdeepProgress':'false', 'showProbAndDist':'false'], process=[false]";
+					
+					IJ.run(tempImp[segmC], "Command From Macro",runText);
+					
+					tempImp [segmC].changes = false;
+					tempImp [segmC].close();
+					tempImp [segmC] = WindowManager.getImage("Label Image").duplicate();
+					tempImp [segmC].hide();
+					WindowManager.getImage("Label Image").changes = false;
+					WindowManager.getImage("Label Image").close();
+					
+					progress.addToBar(1.0/(double)numberOfChannels*0.6);
+				}else {
 //					tempImp.show();
 //					new WaitForUserDialog("before thr").show();
 //					tempImp.hide();
@@ -783,17 +883,6 @@ public void run(String arg) {
 					
 					progress.addToBar(1.0/(double)numberOfChannels*0.1);				
 					
-				}else{
-					progress.updateBarText("Set custom threshold " + customThr + " ...");
-					threshold = customThr [segmC];
-					tp1.append("Used " + chosenAlgorithm + " as intensity threshold - threshold value:	" + df6.format(threshold));
-
-					progress.addToBar(1.0/(double)numberOfChannels*0.5);
-					
-					progress.updateBarText("Segment image with threshold " + dfDialog.format(threshold) + " ...");
-					segmentImage(tempImp [segmC], threshold, 0, tempImp [segmC], 0, false, darkBackground [segmC]);
-
-					progress.addToBar(1.0/(double)numberOfChannels*0.1);
 				}			
 				
 				if(excludeZeroRegions [segmC]) {
@@ -806,86 +895,89 @@ public void run(String arg) {
 					stayAwake();
 				}
 				
-			   	tempImp [segmC].deleteRoi();
-				
-			   	if(tempImp [segmC].getBitDepth()!=8) {
-					tempImp [segmC] = getOtherBitImageFromBinary32bit(tempImp [segmC], false, 8);
-//				   	tempImp [segmC].show();
-//					new WaitForUserDialog("bitconv").show();
-//					tempImp [segmC].hide();	
-				}
+	   			if(despeckle [segmC] || removeParticles [segmC] || fillHoles [segmC] || watershed [segmC]) {
+	   				tempImp [segmC].deleteRoi();							   	
+				   	if(tempImp [segmC].getBitDepth()!=8) {
+						tempImp [segmC] = getOtherBitImageFromBinary32bit(tempImp [segmC], false, 8);
+//					   	tempImp [segmC].show();
+//						new WaitForUserDialog("bitconv").show();
+//						tempImp [segmC].hide();	
+					}		   	
 			   	
-				if(despeckle [segmC]) {
-					progress.updateBarText("Despeckle mask");
-					IJ.run(tempImp [segmC], "Despeckle", "");
-				}
-
-				progress.addToBar(1.0/(double)numberOfChannels*0.1);
-
-	   			if(keepAwake) {
-					stayAwake();
-				}
-				if(removeParticles [segmC]) {
-					if(keepAwake) {
+					if(despeckle [segmC]) {
+						progress.updateBarText("Despeckle mask");
+						IJ.run(tempImp [segmC], "Despeckle", "");
+					}
+	
+					progress.addToBar(1.0/(double)numberOfChannels*0.1);
+	
+		   			if(keepAwake) {
 						stayAwake();
 					}
+					if(removeParticles [segmC]) {
+						if(keepAwake) {
+							stayAwake();
+						}
+						
+						progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + ")...");
+						mask = getFillHolesAndRemoveNoise(tempImp [segmC], linkGapsForRemoveRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight), removeRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight), segmC);
+						
+						progress.addToBar(1.0/(double)numberOfChannels*0.1);
+	
+//					   	tempImp [segmC].show();
+//						new WaitForUserDialog("calc").show();
+//						tempImp [segmC].hide();	
 					
-					progress.updateBarText("Get mask with filled holes and closed gaps (radius " + dfDialog.format(removeRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight)) + " " + pixelUnit + ")...");
-					mask = getFillHolesAndRemoveNoise(tempImp [segmC], linkGapsForRemoveRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight), removeRadius [segmC] / (0.5 * pixelWidth + 0.5 * pixelHeight), segmC);
-					
-					progress.addToBar(1.0/(double)numberOfChannels*0.1);
-
-//				   	tempImp [segmC].show();
-//					new WaitForUserDialog("calc").show();
-//					tempImp [segmC].hide();	
-					
-				   	progress.updateBarText("Invert image...");
+					   	progress.updateBarText("Invert image...");
 //						IJ.run(tempImp, "Invert", "");
-					tempImp [segmC].getProcessor().invert();
-
-		   			if(keepAwake) {
-						stayAwake();
+						tempImp [segmC].getProcessor().invert();
+	
+			   			if(keepAwake) {
+							stayAwake();
+						}
+			   			
+//					   	tempImp [segmC].show();
+//						new WaitForUserDialog("calc").show();
+//						tempImp [segmC].hide();	
+						
+						progress.addToBar(1.0/(double)numberOfChannels*0.1);
+						
+						ImageCalculator ic = new ImageCalculator();
+						tempImp [segmC] = ic.run("AND create", tempImp [segmC], mask);
+	
+						mask.changes = false;
+						mask.close();
+						progress.addToBar(1.0/(double)numberOfChannels*0.1);
+					}else {
+						progress.addToBar(1.0/(double)numberOfChannels*0.3);
 					}
-		   			
+							
+//			   		tempImp [segmC].show();
+//					new WaitForUserDialog("Prefill").show();
+//					tempImp [segmC].hide();	
+				
+					if(fillHoles [segmC]) {
+			   			if(keepAwake) {
+							stayAwake();
+						}
+						progress.updateBarText("Fill holes...");
+						IJ.run(tempImp [segmC], "Fill Holes", "");
+					}
+	
+					if(watershed [segmC]) {
+			   			if(keepAwake) {
+							stayAwake();
+						}
+						progress.updateBarText("Watershed...");
+						IJ.run(tempImp [segmC], "Watershed", "");
+					}
+
 //				   	tempImp [segmC].show();
 //					new WaitForUserDialog("calc").show();
-//					tempImp [segmC].hide();	
-					
-					progress.addToBar(1.0/(double)numberOfChannels*0.1);
-					
-					ImageCalculator ic = new ImageCalculator();
-					tempImp [segmC] = ic.run("AND create", tempImp [segmC], mask);
-
-					mask.changes = false;
-					mask.close();
-					progress.addToBar(1.0/(double)numberOfChannels*0.1);
-				}else {
-					progress.addToBar(1.0/(double)numberOfChannels*0.3);
-				}
-							
-//			   	tempImp [segmC].show();
-//				new WaitForUserDialog("Prefill").show();
-//				tempImp [segmC].hide();	
-				
-				if(fillHoles [segmC]) {
-		   			if(keepAwake) {
-						stayAwake();
-					}
-					progress.updateBarText("Fill holes...");
-					IJ.run(tempImp [segmC], "Fill Holes", "");
-				}
-
-				if(watershed [segmC]) {
-		   			if(keepAwake) {
-						stayAwake();
-					}
-					progress.updateBarText("Watershed...");
-					IJ.run(tempImp [segmC], "Watershed", "");
-				}
-
-//			   	tempImp [segmC].show();
-//				new WaitForUserDialog("calc").show();
-//				tempImp [segmC].hide();
+//					tempImp [segmC].hide();
+	   			}else {
+	   				progress.addToBar(1.0/(double)numberOfChannels*0.4);
+	   			}
 				
 	   			if(keepAwake) {
 					stayAwake();
@@ -911,6 +1003,12 @@ public void run(String arg) {
 				   	tp1.append("Channels in output image:");
 			   		for(int segmC = 0; segmC < numberOfChannels; segmC++) {
 			   			newLuts [c] = originalLuts [channelIDs [segmC]-1];
+			   			if(chosenAlgorithm[segmC].equals("StarDist")) {
+			   				newLuts [c] = starDistLUT;
+		   					outImp.setC(c+1);
+		   					outImp.getProcessor().resetMinAndMax();
+		   					outImp.setDisplayRange(outImp.getProcessor().getMin(), outImp.getProcessor().getMax());	
+			   			}
 				   		newLuts [c+1] = originalLuts [channelIDs [segmC]-1];
 
 				   		tp1.append("Channel " + (c+1) + ":	" + "previous channel " + (channelIDs [segmC]) + " (segmented)");
@@ -947,6 +1045,7 @@ public void run(String arg) {
 			   		
 					outImp.setDisplayMode(IJ.COMPOSITE);
 					outImp.setLuts(newLuts);
+   					outImp.updateAllChannelsAndDraw();
 					IJ.saveAsTiff(outImp, filePrefix + ".tif");
 					outImp.changes = false;
 					outImp.close();
@@ -962,6 +1061,12 @@ public void run(String arg) {
 				   	tp1.append("Channels in output image:");
 			   		for(int segmC = 0; segmC < numberOfChannels; segmC++) {
 			   			newLuts [c] = originalLuts [channelIDs [segmC]-1];
+			   			if(chosenAlgorithm[segmC].equals("StarDist")) {
+			   				newLuts [c] = starDistLUT;
+		   					outImp.setC(c+1);
+		   					outImp.getProcessor().resetMinAndMax();
+		   					outImp.setDisplayRange(outImp.getProcessor().getMin(), outImp.getProcessor().getMax());
+			   			}
 
 				   		tp1.append("Channel " + (c+1) + ":	" + "previous channel " + (channelIDs [segmC]) + " (segmented)");			   			
 		   				for(int s = 0; s < imp.getNSlices(); s++){
@@ -983,15 +1088,16 @@ public void run(String arg) {
 			   		}
 
 					outImp.setDisplayMode(IJ.COMPOSITE);
-					outImp.setLuts(newLuts);			   		
-			   		IJ.saveAsTiff(outImp, filePrefix + ".tif");
+					outImp.setLuts(newLuts);
+   					outImp.updateAllChannelsAndDraw();
+					IJ.saveAsTiff(outImp, filePrefix + ".tif");
 					outImp.changes = false;
 					outImp.close();
 			   	}
 			}else {
 				if(includeDuplicateChannel){
 					double maxValue = Math.pow(2.0, imp.getBitDepth())-1.0;
-			   		
+					
 					outImp = (CompositeImage) IJ.createHyperStack(imp.getTitle() + " lq", imp.getWidth(), imp.getHeight(), 
 			   				imp.getNChannels()+numberOfChannels,
 			   				imp.getNSlices(), imp.getNFrames(), imp.getBitDepth());
@@ -1007,13 +1113,17 @@ public void run(String arg) {
 			   						for(int c = 0; c < imp.getNChannels(); c++){
 			   							for(int segmC = 0; segmC < channelIDs.length; segmC++){
 			   								if(c+1 == channelIDs [segmC]){
-						   						indexOld = tempImp [segmC].getStackIndex(1, s+1, f+1)-1;
+			   									indexOld = tempImp [segmC].getStackIndex(1, s+1, f+1)-1;
 						   						indexNew = outImp.getStackIndex(c+cNew+1, s+1, f+1)-1;
-						   						if(tempImp [segmC].getStack().getVoxel(x, y, indexOld) != 0.0) {
-						   							outImp.getStack().setVoxel(x, y, indexNew, maxValue);
-						   						}
-						   						cNew ++;
-						   						break;
+				   								if(outImp.getBitDepth() != tempImp[segmC].getBitDepth()) {
+							   						if(tempImp [segmC].getStack().getVoxel(x, y, indexOld) != 0.0) {
+							   							outImp.getStack().setVoxel(x, y, indexNew, maxValue);
+							   						}							   						
+				   						   		}else {
+				   						   			outImp.getStack().setVoxel(x, y, indexNew, tempImp [segmC].getStack().getVoxel(x, y, indexOld));
+				   						   		}
+				   								cNew ++;
+						   						break;						   						
 				   							}
 			   							}
 			   							indexOld = imp.getStackIndex(c+1, s+1, f+1)-1;
@@ -1036,7 +1146,7 @@ public void run(String arg) {
 							stayAwake();
 						}
 						newLuts [c+cNew] = originalLuts [c];
-							
+			   			
 			   			search = false;
 						for(int i = 0; i < channelIDs.length; i++){
 							if(c+1 == channelIDs [i]){
@@ -1071,8 +1181,11 @@ public void run(String arg) {
 							
 							for(int i = 0; i < channelIDs.length; i++){
 								if(c+1 == channelIDs [i]){
+									if(chosenAlgorithm[i].equals("StarDist")) {
+							   			newLuts [c+cNew] = starDistLUT;
+							   		}
 									cNew ++;
-	   								newLuts [c+cNew] = originalLuts [c];
+	   								newLuts [c+cNew] = originalLuts [c];	   								
 	   								tp1.append("Channel " + (c+1+cNew) + ":	" + "previous channel " + (c+1) + "");
 	   								
 	   								for(int s = 0; s < imp.getNSlices(); s++){
@@ -1128,6 +1241,14 @@ public void run(String arg) {
 			   		CompositeImage ci = (CompositeImage) outImp;
 		   			ci.setDisplayMode(IJ.COMPOSITE);
 		   			ci.setLuts(newLuts);
+		   			for(int segmC = 0; segmC < channelIDs.length; segmC++) {
+		   				if(chosenAlgorithm[segmC].equals("StarDist")) {
+		   					ci.setC(channelIDs[segmC]);
+							ci.getProcessor().resetMinAndMax();
+							ci.setDisplayRange(ci.getProcessor().getMin(), ci.getProcessor().getMax());	
+							ci.updateAllChannelsAndDraw();
+		   				}						
+					}
 					IJ.saveAsTiff(ci, filePrefix + ".tif");
 			   		outImp.changes = false;
 					outImp.close();
@@ -1135,7 +1256,6 @@ public void run(String arg) {
 					ci.changes = false;
 					ci.close();				
 			   	}else{
-
 				   	tp1.append("Channels in output image: no change of order");
 					for(int segmC = 0; segmC < channelIDs.length; segmC++){
 						for(int s = 0; s < imp.getNSlices(); s++){
@@ -1152,7 +1272,13 @@ public void run(String arg) {
 			   			}
 						tempImp [segmC].changes = false;
 						tempImp [segmC].close();
-					}			   		
+					}
+					for(int segmC = 0; segmC < numberOfChannels; segmC++) {
+						if(chosenAlgorithm[segmC].equals("StarDist")) {
+							imp.setC(channelIDs[segmC]);
+							imp.getProcessor().setLut(starDistLUT);
+						}
+					}
 			   		IJ.saveAsTiff(imp, filePrefix + ".tif");
 			   	}	
 			}
@@ -1794,6 +1920,16 @@ private boolean enterSettings(int defaultType) {
 	fillHoles = new boolean [numberOfChannels];
 	watershed = new boolean [numberOfChannels];
 	
+	//StarDist		
+	selectedStarDistModel = new String [numberOfChannels];
+	starDistNormalizeImage = new boolean [numberOfChannels];
+	starDistPercentileLow = new double [numberOfChannels];
+	starDistPercentileHigh = new double [numberOfChannels];
+	starDistProbabilityScore = new double [numberOfChannels];
+	starDistOverlapThreshold = new double [numberOfChannels];
+	starDistModelPath = new String [numberOfChannels];
+	starDistNTiles = new int [numberOfChannels];
+	
 	for(int i = 0; i < numberOfChannels; i++) {
 		channelIDs [i] = (i+1);
 		
@@ -1816,7 +1952,17 @@ private boolean enterSettings(int defaultType) {
 			customThr [i] = 0.0;
 			darkBackground [i] = false;
 			fillHoles [i] = true;
-			watershed [i] = false;		
+			watershed [i] = false;
+			
+			//StarDist
+			selectedStarDistModel [i] = STARDISTMODELS[3];
+			starDistNormalizeImage [i] = true;
+			starDistPercentileLow [i] = 1.0;
+			starDistPercentileHigh [i] = 99.8;
+			starDistProbabilityScore [i] = 0.48;
+			starDistOverlapThreshold [i] = 0.3;
+			starDistModelPath [i] = "";
+			starDistNTiles [i] = 1;
 		}else if (defaultType == 1){
 			/**DAPI settings*/
 			subtractBackground [i] = false;
@@ -1836,7 +1982,17 @@ private boolean enterSettings(int defaultType) {
 			customThr [i] = 0.0;
 			darkBackground [i] = true;
 			fillHoles [i] = true;
-			watershed [i] = true;		
+			watershed [i] = true;	
+			
+			//StarDist
+			selectedStarDistModel [i] = STARDISTMODELS[0];
+			starDistNormalizeImage [i] = true;
+			starDistPercentileLow [i] = 1.0;
+			starDistPercentileHigh [i] = 99.8;
+			starDistProbabilityScore [i] = 0.48;
+			starDistOverlapThreshold [i] = 0.3;
+			starDistModelPath [i] = "";
+			starDistNTiles [i] = 1;
 		}else {
 			IJ.error("Incorrect default Type - plugin cancelled!");
 		}
@@ -1889,6 +2045,10 @@ private boolean enterSettings(int defaultType) {
 			
 			gd.setInsets(0,0,0);			gd.addCheckbox("Apply Watershed algorithm", watershed [i]);
 			
+			gd.setInsets(10,0,0);		gd.addMessage("NOTE: When using StarDist as segmentation method, we recommend to disable any post-processing of images.", InstructionsFont);		
+			gd.setInsets(0,0,0);		gd.addMessage("Pre-processing may disturb segmentation as well. Thus, if you use StarDist, we recommend to disable all", InstructionsFont);
+			gd.setInsets(0,0,0);		gd.addMessage("checkboxes in this dialog.", InstructionsFont);
+			
 			gd.showDialog();
 			//show Dialog-----------------------------------------------------------------
 
@@ -1925,6 +2085,10 @@ private boolean enterSettings(int defaultType) {
 			
 			if (gd.wasCanceled()) return false;	
 			
+			if(chosenAlgorithm [i].equals("StarDist")) {
+				configureStarDist(i,channelIDs[i]);
+			}
+			
 			if (linkForROI [i] && !removeParticles [i]) {
 				new WaitForUserDialog("'Close gaps ...' option is only available when 'Detect tissue regions ...' option selected. Change of settings required. Dialog will be shown again!").show();
 			}else {
@@ -1932,6 +2096,66 @@ private boolean enterSettings(int defaultType) {
 			}
 		}	
 	}	
+	return true;
+}
+
+/**
+ * Show dialogs to enter settings
+ * @param id: channel id in arrays (starting with 0)
+ * @param channel: channel id in image
+ * */
+private boolean configureStarDist(int id, int channelID) {
+	{
+		GenericDialog gd = new GenericDialog(PLUGINNAME + " on " + System.getProperty("os.name") + " - StarDist parameters");	
+		//show Dialog-----------------------------------------------------------------
+		//.setInsets(top, left, bottom)
+		gd.setInsets(0,0,0);		gd.addMessage(PLUGINNAME + ", Version " + PLUGINVERSION + ", \u00a9 2019-2022 JN Hansen", SuperHeadingFont);
+		gd.addHelp("https://imagej.net/plugins/stardist");
+		
+		gd.setInsets(20,0,0);	gd.addMessage("Information on StarDist - more at https://imagej.net/plugins/stardist", HeadingFont);
+		gd.setInsets(0,0,0);		gd.addMessage("StarDist allows object detection with star-convex shapes using a neural-network-based prediction.", InstructionsFont);
+		gd.setInsets(0,0,0);		gd.addMessage("To use StarDist in the AdipoQ workflow, you need to install StarDist as described at the webpage referenced above.", InstructionsFont);
+		gd.setInsets(0,0,0);		gd.addMessage("To understand the StarDist workflow for segmentation and the parameters to be set, visit this webpage", InstructionsFont);
+		gd.setInsets(0,0,0);		gd.addMessage("or click the Help button (which redirects to that link).", InstructionsFont);		
+
+		gd.setInsets(10,0,0);		gd.addMessage("When using StarDist, also cite the StarDist paper referenced at https://imagej.net/plugins/stardist", InstructionsFont);
+
+		gd.setInsets(10,0,0);	gd.addMessage("Note that while using StarDist, AdipoQ Preparator may open and close image windows. Make sure to not interfere with the", InstructionsFont);
+		gd.setInsets(0,0,0);		gd.addMessage("windows that pop up to avoid a crash of the plugin.", InstructionsFont);
+		
+		gd.setInsets(20,0,0);	gd.addMessage("Set StarDist parameters for segmenting channel " + channelID + "", HeadingFont);
+		gd.setInsets(0,0,0);		gd.addMessage("Neural Network Prediction", SubHeadingFont);
+		gd.setInsets(0,0,0);		gd.addChoice("Model", STARDISTMODELS,  selectedStarDistModel [id]);
+		gd.setInsets(0,0,0);		gd.addCheckbox("Normalize Image", starDistNormalizeImage [id]);
+		gd.setInsets(0,0,0);		gd.addNumericField("Percentile low (>=0,<=100)",starDistPercentileLow[id], 1);
+		gd.setInsets(0,0,0);		gd.addNumericField("Percentile high (>=0,<=100)", starDistPercentileHigh[id], 1);
+		gd.setInsets(20,0,0);	gd.addMessage("NMS Postprocessing", SubHeadingFont);
+		gd.setInsets(0,0,0);		gd.addSlider("Probability/Score Threshold", 0.00, 1.00, starDistProbabilityScore[id]);
+		gd.setInsets(0,0,0);		gd.addSlider("Overlap Threshold", 0.00, 1.00, starDistOverlapThreshold[id]);
+
+		gd.setInsets(20,0,0);	gd.addMessage("Advanced", SubHeadingFont);
+		gd.setInsets(0,0,0);		gd.addMessage("If you selected to load a custom model from a .zip file, specify the path to the file here:", InstructionsFont);
+		gd.setInsets(0,0,0);		gd.addStringField("File path to model (.zip)", "");
+		gd.setInsets(0,0,0);		gd.addNumericField("Number of tiles (evtl. increase for large images)", starDistNTiles[id], 0);
+		
+		gd.showDialog();
+		//show Dialog-----------------------------------------------------------------
+
+		//read and process variables--------------------------------------------------	
+		{
+			selectedStarDistModel [id] = gd.getNextChoice();
+			starDistNormalizeImage [id] =  gd.getNextBoolean();
+			starDistPercentileLow [id] = gd.getNextNumber();
+			starDistPercentileHigh [id] = gd.getNextNumber();
+			starDistProbabilityScore [id] = gd.getNextNumber();
+			starDistOverlapThreshold [id] = gd.getNextNumber();
+			starDistModelPath [id] = gd.getNextString();	
+			starDistNTiles [id] = (int) gd.getNextNumber();
+		}
+		//read and process variables--------------------------------------------------
+		
+		if (gd.wasCanceled()) return false;	
+	}		
 	return true;
 }
 
@@ -2214,6 +2438,40 @@ ImagePlus getOtherBitImageFromBinary32bit(ImagePlus imp, boolean copyOverlay, in
 		
 	impNew.setCalibration(imp.getCalibration());
 	return impNew;	
+}
+
+private static LUT getLUT(double [][] array, boolean multiplyWith255) {
+	byte [] red = new byte [array.length];
+	byte [] green = new byte [array.length];
+	byte [] blue = new byte [array.length];
+	for(int i = 0; i < red.length; i++) {		
+		if(multiplyWith255) {
+			red [i] = (byte) (array [i][0] * 255.0);
+			green [i] = (byte) (array [i][1] * 255.0);
+			blue [i] = (byte) (array [i][2] * 255.0);
+		}else {
+			red [i] = (byte) (array [i][0]);
+			green [i] = (byte) (array [i][1]);
+			blue [i] = (byte) (array [i][2]);
+		}
+	}
+	
+	if(red.length < 256) {
+		//Interpolate
+		byte [] newRed = new byte [256];
+		byte [] newGreen = new byte [256];
+		byte [] newBlue = new byte [256];
+		int oldPos;
+		for (int i = 0; i < newRed.length; i++) {
+			oldPos = (int)((double) i * (double) red.length / 256.0);
+			newRed [i] = red [oldPos];
+			newGreen [i] = green [oldPos];
+			newBlue [i] = blue [oldPos];
+		}
+		return new LUT (8,newRed.length,newRed,newGreen,newBlue);
+	}else {
+		return new LUT (8,red.length,red,green,blue);
+	}	
 }
 
 private void stayAwake() {
