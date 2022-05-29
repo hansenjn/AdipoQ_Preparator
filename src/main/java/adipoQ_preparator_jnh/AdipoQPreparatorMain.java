@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.2.0
+* AdipoQ Preparator Version 0.2.1
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: May 28, 2022)
+* Date: October 13, 2020 (This Version: May 29, 2022)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -46,7 +46,7 @@ import ij.process.AutoThresholder.Method;
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.2.0";
+	static final String PLUGINVERSION = "0.2.1";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -1952,7 +1952,7 @@ private boolean importSettings() {
 			IJ.error("Problem with loading preferences - parameters missing or inappropriate text file.");
 			return false;
 		}
-		if(chosenAlgorithm [segmC] == "StarDist") {
+		if(chosenAlgorithm [pos] == "StarDist") {
 			if(selectedStarDistModel [pos] == "None" || 
 				starDistPercentileLow [pos] == -1.0 || starDistPercentileHigh [pos] == -1.0 || 
 				starDistProbabilityScore [pos] == -1.0 || starDistOverlapThreshold [pos] == -1.0 || 
