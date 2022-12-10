@@ -11,10 +11,10 @@
  
  	<artifactId>AdipoQ_Preparator_JNH</artifactId>
  	<groupId>JNH</groupId>
-    <version>0.2.1-SNAPSHOT</version> 
+    <version>0.2.2-SNAPSHOT</version> 
     <name>AdipoQ_Preparator</name>
     <description>ImageJ plugins to quantify images of cultured cells and adipose tissue - Part I.</description>
- 	<url>https://github.com/hansenjn/</url>
+ 	<url>https://github.com/hansenjn/AdipoQ</url>
 	<inceptionYear>2020</inceptionYear>
 	<organization>
 		<name>JNH</name>
@@ -34,7 +34,7 @@
             <id></id>
             <name>Jan Niklas Hansen</name>
             <email>jan.hansen@uni-bonn.de</email>
-            <url>r</url>
+            <url>https://github.com/hansenjn/</url>
             <organization></organization>
             <organizationUrl></organizationUrl>
             <roles>
@@ -137,7 +137,7 @@
 				<artifactId>maven-jar-plugin</artifactId>
 				<configuration>
 					<projectName>AdipoQ_Preparator plugin for ImageJ.</projectName>
-					<organizationName>Jan Niklas Hansen</organizationName>
+					<organizationName>Jan N. Hansen</organizationName>
 					<descriptorRefs>
             			<descriptorRef>jar-with-dependencies</descriptorRef>
           			</descriptorRefs>

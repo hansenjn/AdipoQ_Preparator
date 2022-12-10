@@ -1,6 +1,6 @@
 package adipoQ_preparator_jnh;
 /** ===============================================================================
-* AdipoQ Preparator Version 0.2.1
+* AdipoQ Preparator Version 0.2.2
 * 
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@ package adipoQ_preparator_jnh;
 * See the GNU General Public License for more details.
 *  
 * Copyright (C) Jan Niklas Hansen
-* Date: October 13, 2020 (This Version: May 29, 2022)
+* Date: October 13, 2020 (This Version: December 10, 2022)
 *   
 * For any questions please feel free to contact me (jan.hansen@uni-bonn.de).
 * =============================================================================== */
@@ -42,11 +42,13 @@ import loci.plugins.BF;
 import loci.plugins.in.ImportProcess;
 import loci.plugins.in.ImporterOptions;
 import ij.process.AutoThresholder.Method;
+import ij.process.AutoThresholder;
+import ij.process.ImageProcessor;
 
 public class AdipoQPreparatorMain implements PlugIn, Measurements {
 	//Name variables
 	static final String PLUGINNAME = "AdipoQ Preparator";
-	static final String PLUGINVERSION = "0.2.1";
+	static final String PLUGINVERSION = "0.2.2";
 	
 	//Fix fonts
 	static final Font SuperHeadingFont = new Font("Sansserif", Font.BOLD, 16);
@@ -1342,6 +1344,9 @@ private Roi getRegionsAboveZeroAsROI(ImagePlus imp, int channel, double closeHol
 	
 	IJ.run(tempImp, "Maximum...", "radius=" + dfDialog.format(closeHolesRadius));
 	IJ.run(tempImp, "Minimum...", "radius=" + dfDialog.format(closeHolesRadius));
+
+	tempImp.getProcessor().setAutoThreshold(AutoThresholder.Method.Default, true);
+	tempImp.getProcessor().setThreshold(1, 255, ImageProcessor.NO_LUT_UPDATE);
 	
 	IJ.run(tempImp, "Create Selection", "");
 	
@@ -1357,9 +1362,10 @@ private Roi getRegionsAboveZeroAsROI(ImagePlus imp, int channel, double closeHol
 			roi = tempImp.getRoi();
 		}
 	}
-	
+
 //	tempImp.duplicate().show();
 //	new WaitForUserDialog("MinMaxedWithSelection " + "radius=" + dfDialog.format(closeHolesRadius)).show();	
+	
 	tempImp.changes = false;
 	tempImp.close();
 	
